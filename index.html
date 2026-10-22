@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全台郵遞區號與行政區精準查詢系統</title>
+    <title>全台郵遞區號與門牌行政區精準查詢系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tesseract.js OCR 庫 (支援相機拍照辨識) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -15,77 +17,88 @@
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f8fafc;
         }
-        .tab-active {
-            border-bottom: 3px solid #2563eb;
-            color: #2563eb;
-            font-weight: 600;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col">
 
     <!-- Header Navigation -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="bg-blue-600 p-2 rounded-lg text-white">
                     <i data-lucide="map-pin" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight sm:text-xl">全台郵遞區號與行政區精準查詢系統</h1>
-                    <p class="text-xs text-slate-400">含台北郵件處理中心最新路段對照資料</p>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight">全台郵遞區號與門牌行政區精準查詢</h1>
+                    <p class="text-xs text-slate-400">完整收錄全台 368 鄉鎮市區與歧義智慧提示系統</p>
                 </div>
-            </div>
-            <div class="flex items-center space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>台北市路段資料已全數更新</span>
             </div>
         </div>
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6">
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6">
 
-        <!-- Navigation Tabs -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-1 flex space-x-1 overflow-x-auto">
-            <button id="tab-search" onclick="switchTab('search')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm">
+        <!-- Navigation Tabs (兩分頁設計) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-1 flex space-x-1">
+            <button id="tab-scan" onclick="switchTab('scan')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+                <span>📷 相機掃描判斷</span>
+            </button>
+            <button id="tab-search" onclick="switchTab('search')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
                 <i data-lucide="search" class="w-4 h-4"></i>
-                <span>單筆路段查詢</span>
-            </button>
-            <button id="tab-browse" onclick="switchTab('browse')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
-                <i data-lucide="grid" class="w-4 h-4"></i>
-                <span>縣市區域總覽</span>
-            </button>
-            <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
-                <i data-lucide="layers" class="w-4 h-4"></i>
-                <span>批次地址解析</span>
+                <span>⌨️ 手打輸入搜尋</span>
             </button>
         </div>
 
-        <!-- Section 1: Single Search View -->
-        <section id="view-search" class="space-y-6">
+        <!-- Section 1: Camera Scan View (相機掃描判斷頁面) -->
+        <section id="view-scan" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-4">
+                <div class="max-w-md mx-auto space-y-3">
+                    <h2 class="text-lg font-bold text-slate-800">拍攝或上傳地址圖片進行智慧辨識</h2>
+                    <p class="text-xs text-slate-500">點擊下方按鈕直接啟動手機原生相機拍照，或從相簿選擇圖片，系統將自動提取中英文文字並比對精準郵遞區號與行政區。</p>
+                    
+                    <button onclick="document.getElementById('cameraInput').click()" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-base">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                        <span>📷 開啟相機 / 選擇照片掃描</span>
+                    </button>
+                    <!-- 原生相機與檔案選擇器 -->
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleImageScan(event)" class="hidden">
+                </div>
+
+                <div id="ocrStatus" class="text-xs font-bold text-blue-600 my-2"></div>
+                
+                <div class="max-w-sm mx-auto">
+                    <img id="previewImg" alt="預覽圖" class="max-w-full rounded-xl border border-slate-200 mx-auto hidden shadow-sm">
+                </div>
+
+                <!-- 掃描結果顯示卡片 -->
+                <div id="scanResultBox" class="hidden max-w-md mx-auto mt-6 p-5 bg-blue-50 border border-blue-100 rounded-2xl text-left space-y-3 shadow-sm">
+                    <div class="text-xs font-semibold text-blue-600 uppercase tracking-wider">辨識與解析結果</div>
+                    <div>
+                        <div class="text-xs text-slate-500">原始辨識文字：</div>
+                        <div id="scanRawText" class="text-xs font-mono bg-white p-2 rounded border border-blue-200 mt-1 text-slate-700 break-all">---</div>
+                    </div>
+                    <div id="scanResultContent" class="pt-2 border-t border-blue-200 space-y-2">
+                        <!-- 動態帶入掃描結果或歧義警告 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Manual Search View (手打輸入搜尋頁面) -->
+        <section id="view-search" class="hidden space-y-6">
             <!-- Search Bar Box -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                         <i data-lucide="search" class="w-5 h-5"></i>
                     </div>
-                    <input type="text" id="single-search-input" oninput="handleSingleSearch()" placeholder="請輸入路段、街名、行政區或郵遞區號 (例如：信義路、公園路、大湖街、100...)" class="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-300 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-base transition duration-150 shadow-inner">
+                    <input type="text" id="single-search-input" oninput="handleSingleSearch()" placeholder="請輸入中文或英文地址關鍵字 (例：Zhongzheng Dist, Zhongzheng Dist Keelung...)" class="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-300 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-base transition duration-150 shadow-inner">
                     <button onclick="clearSingleSearch()" id="clear-search-btn" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
                         <i data-lucide="x-circle" class="w-5 h-5"></i>
                     </button>
@@ -93,125 +106,26 @@
                 
                 <!-- Quick Filter Tags -->
                 <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span class="font-medium text-slate-600">快捷熱門路段：</span>
-                    <button onclick="fillSearch('公園路')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">中正 公園路</button>
-                    <button onclick="fillSearch('迪化街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">大同 迪化街</button>
-                    <button onclick="fillSearch('市民大道')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">市民大道</button>
-                    <button onclick="fillSearch('天母東路')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">士林 天母東路</button>
-                    <button onclick="fillSearch('大湖街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">內湖 大湖街</button>
-                    <button onclick="fillSearch('政大一街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">木柵 政大一街</button>
+                    <span class="font-medium text-slate-600">測試模糊與精準：</span>
+                    <button onclick="fillSearch('Zhongzheng Dist')" class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-md transition font-medium">⚠️ 模糊測試: Zhongzheng Dist</button>
+                    <button onclick="fillSearch('Zhongzheng Dist Keelung')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">基隆中正區 (完整)</button>
+                    <button onclick="fillSearch('Zhongzheng Dist, Taipei City')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">台北中正區 (完整)</button>
+                    <button onclick="fillSearch('Xinyi Dist')" class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-md transition font-medium">⚠️ 模糊測試: Xinyi Dist</button>
                 </div>
             </div>
 
             <!-- Stats Bar -->
             <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 px-2">
-                <div>共找到 <span id="search-count" class="font-bold text-blue-600">0</span> 筆符合結果</div>
+                <div>查詢結果：</div>
                 <div class="flex items-center space-x-2">
                     <i data-lucide="info" class="w-4 h-4 text-slate-400"></i>
-                    <span>已精準對映台北郵件處理中心特用掛號分區號碼</span>
+                    <span>已啟用全台同名行政區歧義提示邏輯</span>
                 </div>
             </div>
 
-            <!-- Results Grid -->
-            <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Result Container -->
+            <div id="search-results" class="space-y-4">
                 <!-- Dynamic cards loaded via JS -->
-            </div>
-        </section>
-
-        <!-- Section 2: Browse View -->
-        <section id="view-browse" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                <h2 class="text-base font-semibold text-slate-800 flex items-center space-x-2">
-                    <i data-lucide="map" class="w-5 h-5 text-blue-600"></i>
-                    <span>依縣市與行政區瀏覽</span>
-                </h2>
-                
-                <!-- City Selector -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2" id="city-selector">
-                    <!-- City buttons filled by JS -->
-                </div>
-
-                <hr class="border-slate-100">
-
-                <!-- District Chips -->
-                <div>
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">行政區/郵件 processing 分區</span>
-                    <div class="flex flex-wrap gap-2" id="district-chips">
-                        <!-- District chips filled by JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Selected District Road List Container -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                        <h3 id="browse-district-title" class="text-lg font-bold text-slate-800">請選擇行政區</h3>
-                        <p id="browse-district-subtitle" class="text-xs text-slate-500">點擊上方行政區以查看詳細郵遞區號及包含路段列表</p>
-                    </div>
-                    <span id="browse-district-zip" class="text-2xl font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">-</span>
-                </div>
-
-                <div id="browse-road-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    <div class="col-span-full py-12 text-center text-slate-400">
-                        <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                        <p>請於上方點選區域進行資料檢視</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 3: Batch Lookup View -->
-        <section id="view-batch" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-slate-800 flex items-center space-x-2">
-                        <i data-lucide="file-text" class="w-5 h-5 text-blue-600"></i>
-                        <span>批次地址解析與郵遞區號對照</span>
-                    </h2>
-                    <button onclick="clearBatchInput()" class="text-xs text-slate-500 hover:text-red-600 transition">清空輸入</button>
-                </div>
-                <p class="text-xs text-slate-500">請在下方輸入多筆地址（每行一筆），系統將迅速解析對應之 3 碼郵遞區號與歸屬分區。</p>
-
-                <textarea id="batch-input" rows="6" placeholder="例如：
-台北市中正區公園路1號
-台北市內湖區大湖街100號
-台北市北投區一心街5號
-文林北路200號" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm font-mono"></textarea>
-
-                <div class="flex justify-end space-x-3">
-                    <button onclick="runBatchLookup()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-sm transition flex items-center space-x-2">
-                        <i data-lucide="cpu" class="w-4 h-4"></i>
-                        <span>開始解析對照</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Batch Results Table -->
-            <div id="batch-result-card" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800">解析對照結果</h3>
-                    <button onclick="copyBatchResults()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center space-x-1">
-                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        <span>複製對照結果</span>
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-sm text-left text-slate-600">
-                        <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th scope="col" class="px-4 py-3">原始輸入</th>
-                                <th scope="col" class="px-4 py-3">郵遞區號</th>
-                                <th scope="col" class="px-4 py-3">歸屬區域/分區</th>
-                                <th scope="col" class="px-4 py-3">匹配路段</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batch-table-body" class="divide-y divide-slate-200 font-mono text-xs">
-                            <!-- JS calculated rows -->
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </section>
 
@@ -219,8 +133,8 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 mt-auto py-4">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-            全台郵遞區號精準查詢系統 &copy; 2026 | 資料來源：台北郵件處理中心作業科掛號函件股對照表 & 中華郵政資料
+        <div class="max-w-4xl mx-auto px-4 text-center text-xs text-slate-500">
+            全台郵遞區號與門牌行政區精準查詢系統 &copy; 2026
         </div>
     </footer>
 
@@ -232,293 +146,720 @@
 
     <!-- Application Script -->
     <script>
-        // Data Store: Comprehensive Taipei Mail Sorting Reference + Nationwide Core Postcode Data
-        const DB = [
-            // Taipei City (Comprehensive Data from Reference Diagrams)
-            {
-                city: "台北市",
-                district: "中正區",
-                zip: "100",
-                roads: [
-                    "三元街", "丹陽街", "公園路", "水源路", "永綏街", "同安街", "沅陵街", "秀山街", "西陽街", 
-                    "金門街", "信陽街", "南海路", "南陽街", "思源街", "泉州街", "牯嶺街", "徐州街", "晉江街", 
-                    "樹林街", "泰安街", "常德街", "許昌街", "連雲街", "惠安街", "湖口街", "韶安街", "廈門街", 
-                    "福州街", "襄陽街", "齊東街", "衡陽街", "館前路", "臨沂街", "襄陽街", "鎮江街", "懷寧街", 
-                    "實慶路", "八德路", "博愛路", "延平南路", "林森南路", "愛國西路", "中山南路", "北平西路", 
-                    "北平東路", "杭州北路", "武昌街①", "金山北路", "長沙街①", "青島西路", "青島東路", "信義路①", 
-                    "貴陽街①", "開封街①", "寧波西路", "寧波東路", "漢口街①", "仁愛路①", "汀州路①②", "和平西路①", 
-                    "忠孝西路①", "杭州南路①②", "重慶南路①②", "紹興南路", "紹興北路", "濟南路①②", "羅斯福路①②③", 
-                    "凱達格蘭大道", "市民大道一段84號以下"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "大同區",
-                zip: "103",
-                roads: [
-                    "大龍街", "五原街", "天水路", "太原街", "平陽街", "民樂街", "永昌街", "甘州街", "甘谷街", 
-                    "伊寧街", "安西街", "赤峰街", "昌吉街", "保安街", "哈密街", "車輪街", "涼州街", "敦煌路", 
-                    "景化街", "華亭街", "貴德街", "塔城街", "萬全街", "寧夏路", "蘭州街", "歸綏街", "雙連街", 
-                    "迪化街①②", "重慶北路①②③", "延平北路①②③④", "市民大道一段(100號除外)", "鳳洲街", "西寧北路", "酒泉街"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "中山區",
-                zip: "104",
-                roads: [
-                    "一江街", "大直街", "中原街", "天祥街", "北安路", "四平街", "玉門街", "伊通街", "吉林路", 
-                    "合江街", "朱侖街", "明水路", "通北街", "植福路", "渭水路", "農安街", "劍南路", "德惠街", 
-                    "遼寧街", "錦州街", "龍江路", "濱江街", "雙城街", "建國北路", "長安東路①", "中山北路①②", 
-                    "民生東路①②", "民權東路①②", "南京東路①②", "新生北路①②③", "敬業一路", "敬業二路", "敬業三路", 
-                    "敬業四路", "樂群一路", "樂群二路", "樂群三路", "松江路", "崇實路", "市民大道二段單全", "市民大道三段單全", 
-                    "內湖路一段32巷全"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "松山區",
-                zip: "105",
-                roads: [
-                    "三民路", "北寧路", "吉祥路", "延壽街", "東寧路", "松河路", "健康路", "富錦街", "塔悠路", 
-                    "新中街", "新東街", "寧安街", "慶城街", "撫遠街", "寶清街", "饒河街", "八德路③", "光復北路", 
-                    "敦化北路", "民生東路④⑤", "民權東路③", "南京東路④⑤", "市民大道四段單全", "市民大道五段單全", 
-                    "市民大道六段單全", "松山路9巷雙全"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "萬華區",
-                zip: "108",
-                roads: [
-                    "三水街", "大理街", "內江街", "民和街", "永福街", "西昌街", "昆明街", "東園街", "武成街", 
-                    "長泰街", "長順街", "青年路", "康定路", "梧州街", "洛陽街", "峨嵋街", "桂林路", "廣州街", 
-                    "萬大路", "萬青街", "漢中街", "德昌街", "興義街", "興寧街", "雙和街", "雙園街", "實興街", 
-                    "西寧南路", "武昌街②", "長沙街②", "貴陽街②", "開封街②", "漢口街②", "艋舺大道", "西園路①②", 
-                    "和平西路③", "環河南路①②③", "中華路"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "大安區",
-                zip: "106",
-                roads: [
-                    "大安路", "四維路", "永康街", "安和路", "安居街", "青田街", "芳蘭路", "長興街", "敦南街", 
-                    "泰順街", "浦城街", "雲和街", "溫州街", "瑞安街", "樂利路", "通化街", "通安街", "臨江街", 
-                    "麗水街", "龍泉街", "信義路", "辛亥路①②③", "濟南路③", "臥龍街", "金山南路②", "建國南路①②", 
-                    "復興南路①②", "敦化南路①②", "和平東路①②", "新生南路②③", "市民大道三段86號以上"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "信義區",
-                zip: "110",
-                roads: [
-                    "大道路", "市府路", "吳興街", "林口街", "松仁路", "松子路", "松勇路", "松高路", "松智路", 
-                    "松隆路", "松動路", "松廉路", "松壽路", "松德路", "松信路", "青雲街", "信安街", "崇德街", 
-                    "祥雲街", "莊敬路", "景雲街", "紫雲街", "逸仙路", "瑞雲街", "菸廠路", "基隆路①", "信義路⑤⑥", 
-                    "松山路", "市民大道五段雙全", "市民大道六段雙全"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "北投區",
-                zip: "112",
-                roads: [
-                    "一心街", "一德街", "三合街", "大大路", "大同街", "大度路", "大業路", "大興街", "中山路", 
-                    "中心街", "中正街", "中和街", "中華街", "公館路", "民族街", "石牌路", "立農街", "石仙路", 
-                    "立功街", "光明路", "吉利街", "同德街", "自強街", "仙渡路", "西安街", "西圍街", "秀山街", 
-                    "育仁路", "奉賢路", "奇岩路", "東華街", "東陽街", "知行路", "泉源路", "洲美街", "建民路", 
-                    "崇仁路", "振興街", "珠海路", "尊賢街", "登山路", "進賢路", "翠嶺街", "新市街", "新民路", 
-                    "新興路", "溫泉街", "義方街", "義理街", "聖景路", "實踐街", "稻香路", "學園路", "樹林路", 
-                    "磺港路", "豐年路", "雙全街", "懷德街", "中央北路", "中央南路", "文化三路", "文林北路", 
-                    "中山北路七段219巷3弄"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "陽明山分區",
-                zip: "113",
-                roads: [
-                    "大亨路", "中華路", "中興路", "仁民路", "光華路", "和平路", "長春街", "建國路", "建業路", 
-                    "格致路", "紗帽路", "國泰街", "凱旋路", "勝利街", "新生街", "湖底路", "菁山路", "竹子湖路", 
-                    "陽明路一段", "陽明路二段", "愛富一街", "愛富二街", "愛富三街", "華岡路"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "士林區",
-                zip: "111",
-                roads: [
-                    "前街", "後街", "力行街", "士東路", "士商路", "大北路", "大光街", "大西路", "大東路", 
-                    "大南路", "小北街", "小西街", "小東街", "小南街", "中正路", "中社路", "中興街", "安平街", 
-                    "自祥巷", "至善路", "文昌路", "文林路", "志成街", "克強街", "幸福街", "忠義街", "至誠路", 
-                    "和豐街", "幸福路", "忠勇街", "忠誠路", "社子街", "社中街", "明溪街", "東山路", "社正路", 
-                    "芝玉路", "雨農路", "雨聲街", "前港街", "後港街", "故宮路", "美崙街", "德行東路", "基隆路", 
-                    "倫等街", "通河西街", "莊頂路", "通河東街", "華興街", "華聲街", "華齡街", "貴富街", "新安路", 
-                    "福志路", "福林路", "福國路", "福壽路", "福榮街", "福德路", "翠山街", "劍潭路", "磺溪街", 
-                    "下樹林街", "中庸五路", "天母東路"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "內湖區",
-                zip: "114",
-                roads: [
-                    "大湖街", "文德路", "安康路", "江南路", "行善路", "東湖路", "金龍路", "洲子街", "港墘路", 
-                    "新湖一路", "新湖二路", "新湖三路", "舊宗路", "瑞光路", "康寧路", "陽光街", "五分街", 
-                    "金雲路", "金湖路", "星雲街", "行愛路", "康樂街", "金莊路", "港華街", "成功路", "麗山街", 
-                    "環山路", "瑞光路", "港墘路", "東湖路"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "景美分區",
-                zip: "117",
-                roads: [
-                    "三福街", "公館街", "仙岩路", "育英街", "車前路", "景中街", "景興街", "景後街", "景美街", 
-                    "景華街", "景明街", "景福街", "景仁街", "溪洲街", "溪口街", "萬隆街", "萬慶街", "福興路", 
-                    "興順街", "興德路", "興隆路", "景興路"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "木柵分區",
-                zip: "116",
-                roads: [
-                    "一壽街", "下崙路", "久康街", "中崙路", "木柵路", "木新路", "永安街", "光輝路", "老泉街", 
-                    "秀英街", "和興路", "忠順街", "指南路", "富山路", "保儀路", "恆光街", "開元街", "集英街", 
-                    "新光路", "萬安街", "萬利街", "萬和街", "萬壽路", "萬寧街", "政大一街", "政大二街", "政大三街", 
-                    "試院路", "樟新街"
-                ]
-            },
-            {
-                city: "台北市",
-                district: "南港區",
-                zip: "115",
-                roads: [
-                    "三重路", "玉成街", "向陽路", "長安路", "重陽路", "東新街", "南港路", "惠民街", "園區街", 
-                    "新民街", "富康街", "凌雲街", "舊莊街", "研究院路", "經貿一路", "經貿二路", "興華路", 
-                    "興中路", "昆陽街"
-                ]
-            },
-            {
-                city: "新北市",
-                district: "汐止區",
-                zip: "221",
-                roads: [
-                    "康寧街", "長青路", "新台五路", "大同路", "中興路", "福德一路", "福德二路", "汐萬路"
-                ]
-            },
-            { city: "新北市", district: "板橋區", zip: "220", roads: ["中山路", "文化路", "縣民大道", "南雅南路", "雙十路"] },
-            { city: "新北市", district: "新莊區", zip: "242", roads: ["中正路", "新泰路", "幸福路", "思源路"] },
-            { city: "新北市", district: "中和區", zip: "235", roads: ["中山路", "景平路", "連城路", "中正路"] },
-            { city: "桃園市", district: "桃園區", zip: "330", roads: ["中正路", "中山路", "復興路", "大興西路"] },
-            { city: "桃園市", district: "中壢區", zip: "320", roads: ["延平路", "中華路", "元化路", "健行路"] },
-            { city: "台中市", district: "西屯區", zip: "407", roads: ["台灣大道", "文心路", "西屯路", "黎明路"] },
-            { city: "台中市", district: "北區", zip: "404", roads: ["崇德路", "進化北路", "健行路", "三民路"] },
-            { city: "台南市", district: "中西區", zip: "700", roads: ["府前路", "西門路", "民生路", "民族路"] },
-            { city: "高雄市", district: "新興區", zip: "800", roads: ["中山一路", "七賢一路", "六合一路", "中正三路"] },
-            { city: "高雄市", district: "苓雅區", zip: "802", roads: ["三多三路", "五福一路", "成功一路", "光華一路"] }
+        // 全台完整 368 鄉鎮市區與雙語對照資料庫（完整收錄全台所有縣市及鄉鎮區）
+        const TAIWAN_DISTRICTS = [
+            // 基隆市
+            { zh: "基隆市仁愛區", zip: "200", eng: "Ren-ai Dist., Keelung City", cityKey: "keelung", distKeys: ["ren-ai", "renai", "仁愛"] },
+            { zh: "基隆市信義區", zip: "201", eng: "Xinyi Dist., Keelung City", cityKey: "keelung", distKeys: ["xinyi", "信義"] },
+            { zh: "基隆市中正區", zip: "202", eng: "Zhongzheng Dist., Keelung City", cityKey: "keelung", distKeys: ["zhongzheng", "中正"] },
+            { zh: "基隆市中山區", zip: "203", eng: "Zhongshan Dist., Keelung City", cityKey: "keelung", distKeys: ["zhongshan", "中山"] },
+            { zh: "基隆市安樂區", zip: "204", eng: "Anle Dist., Keelung City", cityKey: "keelung", distKeys: ["anle", "安樂"] },
+            { zh: "基隆市暖暖區", zip: "205", eng: "Nuanneun Dist., Keelung City", cityKey: "keelung", distKeys: ["nuanneun", "暖暖"] },
+            { zh: "基隆市七堵區", zip: "206", eng: "Qidu Dist., Keelung City", cityKey: "keelung", distKeys: ["qidu", "七堵"] },
+
+            // 臺北市
+            { zh: "臺北市中正區", zip: "100", eng: "Zhongzheng Dist., Taipei City", cityKey: "taipei", distKeys: ["zhongzheng", "中正"] },
+            { zh: "臺北市大同區", zip: "103", eng: "Datong Dist., Taipei City", cityKey: "taipei", distKeys: ["datong", "大同"] },
+            { zh: "臺北市中山區", zip: "104", eng: "Zhongshan Dist., Taipei City", cityKey: "taipei", distKeys: ["zhongshan", "中山"] },
+            { zh: "臺北市松山區", zip: "105", eng: "Songshan Dist., Taipei City", cityKey: "taipei", distKeys: ["songshan", "松山"] },
+            { zh: "臺北市大安區", zip: "106", eng: "Daan Dist., Taipei City", cityKey: "taipei", distKeys: ["daan", "da-an", "大安"] },
+            { zh: "臺北市萬華區", zip: "108", eng: "Wanhua Dist., Taipei City", cityKey: "taipei", distKeys: ["wanhua", "萬華"] },
+            { zh: "臺北市信義區", zip: "110", eng: "Xinyi Dist., Taipei City", cityKey: "taipei", distKeys: ["xinyi", "信義"] },
+            { zh: "臺北市士林區", zip: "111", eng: "Shilin Dist., Taipei City", cityKey: "taipei", distKeys: ["shilin", "士林"] },
+            { zh: "臺北市北投區", zip: "112", eng: "Beitou Dist., Taipei City", cityKey: "taipei", distKeys: ["beitou", "北投"] },
+            { zh: "臺北市陽明山", zip: "113", eng: "Yangmingshan, Taipei City", cityKey: "taipei", distKeys: ["yangmingshan", "陽明山"] },
+            { zh: "臺北市內湖區", zip: "114", eng: "Neihu Dist., Taipei City", cityKey: "taipei", distKeys: ["neihu", "內湖"] },
+            { zh: "臺北市南港區", zip: "115", eng: "Nangang Dist., Taipei City", cityKey: "taipei", distKeys: ["nangang", "南港"] },
+            { zh: "臺北市文山區", zip: "116", eng: "Wenshan Dist., Taipei City", cityKey: "taipei", distKeys: ["wenshan", "文山"] },
+            { zh: "臺北市文山區 (木柵)", zip: "116", eng: "Wenshan Dist. (Mucha), Taipei City", cityKey: "taipei", distKeys: ["mucha", "木柵"] },
+            { zh: "臺北市文山區 (景美)", zip: "117", eng: "Wenshan Dist. (Jingmei), Taipei City", cityKey: "taipei", distKeys: ["jingmei", "景美"] },
+
+            // 新北市
+            { zh: "新北市萬里區", zip: "207", eng: "Wanli Dist., New Taipei City", cityKey: "new taipei", distKeys: ["wanli", "萬里"] },
+            { zh: "新北市金山區", zip: "208", eng: "Jinshan Dist., New Taipei City", cityKey: "new taipei", distKeys: ["jinshan", "金山"] },
+            { zh: "新北市板橋區", zip: "220", eng: "Banqiao Dist., New Taipei City", cityKey: "new taipei", distKeys: ["banqiao", "板橋"] },
+            { zh: "新北市汐止區", zip: "221", eng: "Xizhi Dist., New Taipei City", cityKey: "new taipei", distKeys: ["xizhi", "汐止"] },
+            { zh: "新北市深坑區", zip: "222", eng: "Shenkeng Dist., New Taipei City", cityKey: "new taipei", distKeys: ["shenkeng", "深坑"] },
+            { zh: "新北市石碇區", zip: "223", eng: "Shiding Dist., New Taipei City", cityKey: "new taipei", distKeys: ["shiding", "石碇"] },
+            { zh: "新北市瑞芳區", zip: "224", eng: "Ruifang Dist., New Taipei City", cityKey: "new taipei", distKeys: ["ruifang", "瑞芳"] },
+            { zh: "新北市平溪區", zip: "226", eng: "Pingxi Dist., New Taipei City", cityKey: "new taipei", distKeys: ["pingxi", "平溪"] },
+            { zh: "新北市雙溪區", zip: "227", eng: "Shuangxi Dist., New Taipei City", cityKey: "new taipei", distKeys: ["shuangxi", "雙溪"] },
+            { zh: "新北市貢寮區", zip: "228", eng: "Gongliao Dist., New Taipei City", cityKey: "new taipei", distKeys: ["gongliao", "貢寮"] },
+            { zh: "新北市新店區", zip: "231", eng: "Xindian Dist., New Taipei City", cityKey: "new taipei", distKeys: ["xindian", "新店"] },
+            { zh: "新北市坪林區", zip: "232", eng: "Pinglin Dist., New Taipei City", cityKey: "new taipei", distKeys: ["pinglin", "坪林"] },
+            { zh: "新北市烏來區", zip: "233", eng: "Wulai Dist., New Taipei City", cityKey: "new taipei", distKeys: ["wulai", "烏來"] },
+            { zh: "新北市永和區", zip: "234", eng: "Yonghe Dist., New Taipei City", cityKey: "new taipei", distKeys: ["yonghe", "永和"] },
+            { zh: "新北市中和區", zip: "235", eng: "Zhonghe Dist., New Taipei City", cityKey: "new taipei", distKeys: ["zhonghe", "中和"] },
+            { zh: "新北市土城區", zip: "236", eng: "Tucheng Dist., New Taipei City", cityKey: "new taipei", distKeys: ["tucheng", "土城"] },
+            { zh: "新北市三峽區", zip: "237", eng: "Sanxia Dist., New Taipei City", cityKey: "new taipei", distKeys: ["sanxia", "三峽"] },
+            { zh: "新北市樹林區", zip: "238", eng: "Shulin Dist., New Taipei City", cityKey: "new taipei", distKeys: ["shulin", "樹林"] },
+            { zh: "新北市鶯歌區", zip: "239", eng: "Yingge Dist., New Taipei City", cityKey: "new taipei", distKeys: ["yingge", "鶯歌"] },
+            { zh: "新北市三重區", zip: "241", eng: "Sanchong Dist., New Taipei City", cityKey: "new taipei", distKeys: ["sanchong", "三重"] },
+            { zh: "新北市新莊區", zip: "242", eng: "Xinzhuang Dist., New Taipei City", cityKey: "new taipei", distKeys: ["xinzhuang", "新莊"] },
+            { zh: "新北市泰山區", zip: "243", eng: "Taishan Dist., New Taipei City", cityKey: "new taipei", distKeys: ["taishan", "泰山"] },
+            { zh: "新北市林口區", zip: "244", eng: "Linkou Dist., New Taipei City", cityKey: "new taipei", distKeys: ["linkou", "林口"] },
+            { zh: "新北市蘆洲區", zip: "247", eng: "Luzhou Dist., New Taipei City", cityKey: "new taipei", distKeys: ["luzhou", "蘆洲"] },
+            { zh: "新北市五股區", zip: "248", eng: "Wugu Dist., New Taipei City", cityKey: "new taipei", distKeys: ["wugu", "五股"] },
+            { zh: "新北市八里區", zip: "249", eng: "Bali Dist., New Taipei City", cityKey: "new taipei", distKeys: ["bali", "八里"] },
+            { zh: "新北市淡水區", zip: "251", eng: "Tamsui Dist., New Taipei City", cityKey: "new taipei", distKeys: ["tamsui", "淡水"] },
+            { zh: "新北市三芝區", zip: "252", eng: "Sanzhi Dist., New Taipei City", cityKey: "new taipei", distKeys: ["sanzhi", "三芝"] },
+            { zh: "新北市石門區", zip: "253", eng: "Shimen Dist., New Taipei City", cityKey: "new taipei", distKeys: ["shimen", "石門"] },
+
+            // 桃園市
+            { zh: "桃園市中壢區", zip: "320", eng: "Zhongli Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["zhongli", "中壢"] },
+            { zh: "桃園市平鎮區", zip: "324", eng: "Pingzhen Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["pingzhen", "平鎮"] },
+            { zh: "桃園市龍潭區", zip: "325", eng: "Longtan Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["longtan", "龍潭"] },
+            { zh: "桃園市楊梅區", zip: "326", eng: "Yangmei Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["yangmei", "楊梅"] },
+            { zh: "桃園市新屋區", zip: "327", eng: "Xinwu Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["xinwu", "新屋"] },
+            { zh: "桃園市觀音區", zip: "328", eng: "Guanyin Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["guanyin", "觀音"] },
+            { zh: "桃園市桃園區", zip: "330", eng: "Taoyuan Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["taoyuan", "桃園"] },
+            { zh: "桃園市龜山區", zip: "333", eng: "Guishan Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["guishan", "龜山"] },
+            { zh: "桃園市八德區", zip: "334", eng: "Bade Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["bade", "八德"] },
+            { zh: "桃園市大溪區", zip: "335", eng: "Daxi Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["daxi", "大溪"] },
+            { zh: "桃園市復興區", zip: "336", eng: "Fuxing Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["fuxing", "復興"] },
+            { zh: "桃園市大園區", zip: "337", eng: "Dayuan Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["dayuan", "大園"] },
+            { zh: "桃園市蘆竹區", zip: "338", eng: "Luzhu Dist., Taoyuan City", cityKey: "taoyuan", distKeys: ["luzhu", "蘆竹"] },
+
+            // 新竹市、新竹縣
+            { zh: "新竹市東區", zip: "300", eng: "East Dist., Hsinchu City", cityKey: "hsinchu city", distKeys: ["east", "東區"] },
+            { zh: "新竹市北區", zip: "300", eng: "North Dist., Hsinchu City", cityKey: "hsinchu city", distKeys: ["north", "北區"] },
+            { zh: "新竹市香山區", zip: "300", eng: "Xiangshan Dist., Hsinchu City", cityKey: "hsinchu city", distKeys: ["xiangshan", "香山"] },
+            { zh: "新竹縣竹北市", zip: "302", eng: "Zhubei City, Hsinchu County", cityKey: "hsinchu county", distKeys: ["zhubei", "竹北"] },
+            { zh: "新竹縣湖口鄉", zip: "303", eng: "Hukou Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["hukou", "湖口"] },
+            { zh: "新竹縣新豐鄉", zip: "304", eng: "Xinfeng Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["xinfeng", "新豐"] },
+            { zh: "新竹縣新埔鎮", zip: "305", eng: "Xinpu Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["xinpu", "新埔"] },
+            { zh: "新竹縣關西鎮", zip: "306", eng: "Guanxi Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["guanxi", "關西"] },
+            { zh: "新竹縣芎林鄉", zip: "307", eng: "Qionglin Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["qionglin", "芎林"] },
+            { zh: "新竹縣寶山鄉", zip: "308", eng: "Baoshan Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["baoshan", "寶山"] },
+            { zh: "新竹縣竹東鎮", zip: "310", eng: "Zhudong Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["zhudong", "竹東"] },
+            { zh: "新竹縣五峰鄉", zip: "311", eng: "Wufeng Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["wufeng", "五峰"] },
+            { zh: "新竹縣橫山鄉", zip: "312", eng: "Hengshan Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["hengshan", "橫山"] },
+            { zh: "新竹縣尖石鄉", zip: "313", eng: "Jianshi Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["jianshi", "尖石"] },
+            { zh: "新竹縣北埔鄉", zip: "314", eng: "Beipu Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["beipu", "北埔"] },
+            { zh: "新竹縣峨眉鄉", zip: "315", eng: "Emei Township, Hsinchu County", cityKey: "hsinchu county", distKeys: ["emei", "峨眉"] },
+
+            // 苗栗縣
+            { zh: "苗栗縣竹南鎮", zip: "350", eng: "Zhunan Township, Miaoli County", cityKey: "miaoli", distKeys: ["zhunan", "竹南"] },
+            { zh: "苗栗縣頭份市", zip: "351", eng: "Toufen City, Miaoli County", cityKey: "miaoli", distKeys: ["toufen", "頭份"] },
+            { zh: "苗栗縣三灣鄉", zip: "352", eng: "Sanwan Township, Miaoli County", cityKey: "miaoli", distKeys: ["sanwan", "三灣"] },
+            { zh: "苗栗縣南庄鄉", zip: "353", eng: "Nanzhuang Township, Miaoli County", cityKey: "miaoli", distKeys: ["nanzhuang", "南庄"] },
+            { zh: "苗栗縣獅潭鄉", zip: "354", eng: "Shitan Township, Miaoli County", cityKey: "miaoli", distKeys: ["shitan", "獅潭"] },
+            { zh: "苗栗縣後龍鎮", zip: "356", eng: "Houlong Township, Miaoli County", cityKey: "miaoli", distKeys: ["houlong", "後龍"] },
+            { zh: "苗栗縣通霄鎮", zip: "357", eng: "Tongxiao Township, Miaoli County", cityKey: "miaoli", distKeys: ["tongxiao", "通霄"] },
+            { zh: "苗栗縣苑裡鎮", zip: "358", eng: "Yuanli Township, Miaoli County", cityKey: "miaoli", distKeys: ["yuanli", "苑裡"] },
+            { zh: "苗栗縣苗栗市", zip: "360", eng: "Miaoli City, Miaoli County", cityKey: "miaoli", distKeys: ["miaoli", "苗栗"] },
+            { zh: "苗栗縣造橋鄉", zip: "361", eng: "Zaoqiao Township, Miaoli County", cityKey: "miaoli", distKeys: ["zaoqiao", "造橋"] },
+            { zh: "苗栗縣頭屋鄉", zip: "362", eng: "Touwu Township, Miaoli County", cityKey: "miaoli", distKeys: ["touwu", "頭屋"] },
+            { zh: "苗栗縣公館鄉", zip: "363", eng: "Gongguan Township, Miaoli County", cityKey: "miaoli", distKeys: ["gongguan", "公館"] },
+            { zh: "苗栗縣大湖鄉", zip: "364", eng: "Dahu Township, Miaoli County", cityKey: "miaoli", distKeys: ["dahu", "大湖"] },
+            { zh: "苗栗縣泰安鄉", zip: "365", eng: "Tai-an Township, Miaoli County", cityKey: "miaoli", distKeys: ["tai-an", "泰安"] },
+            { zh: "苗栗縣銅鑼鄉", zip: "366", eng: "Tongluo Township, Miaoli County", cityKey: "miaoli", distKeys: ["tongluo", "銅鑼"] },
+            { zh: "苗栗縣三義鄉", zip: "367", eng: "Sanyi Township, Miaoli County", cityKey: "miaoli", distKeys: ["sanyi", "三義"] },
+            { zh: "苗栗縣西湖鄉", zip: "368", eng: "Xihu Township, Miaoli County", cityKey: "miaoli", distKeys: ["xihu", "西湖"] },
+            { zh: "苗栗縣卓蘭鎮", zip: "369", eng: "Zhuolan Township, Miaoli County", cityKey: "miaoli", distKeys: ["zhuolan", "卓蘭"] },
+
+            // 臺中市
+            { zh: "臺中市中區", zip: "400", eng: "Central Dist., Taichung City", cityKey: "taichung", distKeys: ["central", "中區"] },
+            { zh: "臺中市東區", zip: "401", eng: "East Dist., Taichung City", cityKey: "taichung", distKeys: ["east", "東區"] },
+            { zh: "臺中市南區", zip: "402", eng: "South Dist., Taichung City", cityKey: "taichung", distKeys: ["south", "南區"] },
+            { zh: "臺中市西區", zip: "403", eng: "West Dist., Taichung City", cityKey: "taichung", distKeys: ["west", "西區"] },
+            { zh: "臺中市北區", zip: "404", eng: "North Dist., Taichung City", cityKey: "taichung", distKeys: ["north", "北區"] },
+            { zh: "臺中市北屯區", zip: "406", eng: "Beitun Dist., Taichung City", cityKey: "taichung", distKeys: ["beitun", "北屯"] },
+            { zh: "臺中市西屯區", zip: "407", eng: "Xitun Dist., Taichung City", cityKey: "taichung", distKeys: ["xitun", "西屯"] },
+            { zh: "臺中市南屯區", zip: "408", eng: "Nantun Dist., Taichung City", cityKey: "taichung", distKeys: ["nantun", "南屯"] },
+            { zh: "臺中市太平區", zip: "411", eng: "Taiping Dist., Taichung City", cityKey: "taichung", distKeys: ["taiping", "太平"] },
+            { zh: "臺中市大里區", zip: "412", eng: "Dali Dist., Taichung City", cityKey: "taichung", distKeys: ["dali", "大里"] },
+            { zh: "臺中市霧峰區", zip: "413", eng: "Wufeng Dist., Taichung City", cityKey: "taichung", distKeys: ["wufeng", "霧峰"] },
+            { zh: "臺中市烏日區", zip: "414", eng: "Wuri Dist., Taichung City", cityKey: "taichung", distKeys: ["wuri", "烏日"] },
+            { zh: "臺中市豐原區", zip: "420", eng: "Fengyuan Dist., Taichung City", cityKey: "taichung", distKeys: ["fengyuan", "豐原"] },
+            { zh: "臺中市后里區", zip: "421", eng: "Houli Dist., Taichung City", cityKey: "taichung", distKeys: ["houli", "后里"] },
+            { zh: "臺中市石岡區", zip: "422", eng: "Shigang Dist., Taichung City", cityKey: "taichung", distKeys: ["shigang", "石岡"] },
+            { zh: "臺中市東勢區", zip: "423", eng: "Dongshi Dist., Taichung City", cityKey: "taichung", distKeys: ["dongshi", "東勢"] },
+            { zh: "臺中市和平區", zip: "424", eng: "Heping Dist., Taichung City", cityKey: "taichung", distKeys: ["heping", "和平"] },
+            { zh: "臺中市新社區", zip: "426", eng: "Xinshe Dist., Taichung City", cityKey: "taichung", distKeys: ["xinshe", "新社"] },
+            { zh: "臺中市潭子區", zip: "427", eng: "Tanzi Dist., Taichung City", cityKey: "taichung", distKeys: ["tanzi", "潭子"] },
+            { zh: "臺中市大雅區", zip: "428", eng: "Daya Dist., Taichung City", cityKey: "taichung", distKeys: ["daya", "大雅"] },
+            { zh: "臺中市神岡區", zip: "429", eng: "Shengang Dist., Taichung City", cityKey: "taichung", distKeys: ["shengang", "神岡"] },
+            { zh: "臺中市大肚區", zip: "432", eng: "Dadu Dist., Taichung City", cityKey: "taichung", distKeys: ["dadu", "大肚"] },
+            { zh: "臺中市沙鹿區", zip: "433", eng: "Shalu Dist., Taichung City", cityKey: "taichung", distKeys: ["shalu", "沙鹿"] },
+            { zh: "臺中市龍井區", zip: "434", eng: "Longjing Dist., Taichung City", cityKey: "taichung", distKeys: ["longjing", "龍井"] },
+            { zh: "臺中市梧棲區", zip: "435", eng: "Wuci Dist., Taichung City", cityKey: "taichung", distKeys: ["wuci", "梧棲"] },
+            { zh: "臺中市清水區", zip: "436", eng: "Qingshui Dist., Taichung City", cityKey: "taichung", distKeys: ["qingshui", "清水"] },
+            { zh: "臺中市大甲區", zip: "437", eng: "Dajia Dist., Taichung City", cityKey: "taichung", distKeys: ["dajia", "大甲"] },
+            { zh: "臺中市外埔區", zip: "438", eng: "Waipu Dist., Taichung City", cityKey: "taichung", distKeys: ["waipu", "外埔"] },
+            { zh: "臺中市大安區", zip: "439", eng: "Daan Dist., Taichung City", cityKey: "taichung", distKeys: ["daan", "大安"] },
+
+            // 彰化縣
+            { zh: "彰化縣彰化市", zip: "500", eng: "Changhua City, Changhua County", cityKey: "changhua", distKeys: ["changhua", "彰化"] },
+            { zh: "彰化縣芬園鄉", zip: "502", eng: "Fenyuan Township, Changhua County", cityKey: "changhua", distKeys: ["fenyuan", "芬園"] },
+            { zh: "彰化縣花壇鄉", zip: "503", eng: "Huatan Township, Changhua County", cityKey: "changhua", distKeys: ["huatan", "花壇"] },
+            { zh: "彰化縣秀水鄉", zip: "504", eng: "Xiushui Township, Changhua County", cityKey: "changhua", distKeys: ["xiushui", "秀水"] },
+            { zh: "彰化縣鹿港鎮", zip: "505", eng: "Lukang Township, Changhua County", cityKey: "changhua", distKeys: ["lukang", "鹿港"] },
+            { zh: "彰化縣福興鄉", zip: "506", eng: "Fusing Township, Changhua County", cityKey: "changhua", distKeys: ["fusing", "福興"] },
+            { zh: "彰化縣線西鄉", zip: "507", eng: "Xianxi Township, Changhua County", cityKey: "changhua", distKeys: ["xianxi", "線西"] },
+            { zh: "彰化縣和美鎮", zip: "508", eng: "Hemei Township, Changhua County", cityKey: "changhua", distKeys: ["hemei", "和美"] },
+            { zh: "彰化縣伸港鄉", zip: "509", eng: "Shengang Township, Changhua County", cityKey: "changhua", distKeys: ["shengang", "伸港"] },
+            { zh: "彰化縣員林市", zip: "510", eng: "Yuanlin City, Changhua County", cityKey: "changhua", distKeys: ["yuanlin", "員林"] },
+            { zh: "彰化縣社頭鄉", zip: "511", eng: "Shetou Township, Changhua County", cityKey: "changhua", distKeys: ["shetou", "社頭"] },
+            { zh: "彰化縣永靖鄉", zip: "512", eng: "Yongjing Township, Changhua County", cityKey: "changhua", distKeys: ["yongjing", "永靖"] },
+            { zh: "彰化縣埔心鄉", zip: "513", eng: "Puxin Township, Changhua County", cityKey: "changhua", distKeys: ["puxin", "埔心"] },
+            { zh: "彰化縣溪湖鎮", zip: "514", eng: "Xihu Township, Changhua County", cityKey: "changhua", distKeys: ["xihu", "溪湖"] },
+            { zh: "彰化縣大村鄉", zip: "515", eng: "Dacun Township, Changhua County", cityKey: "changhua", distKeys: ["dacun", "大村"] },
+            { zh: "彰化縣埔鹽鄉", zip: "516", eng: "Puyan Township, Changhua County", cityKey: "changhua", distKeys: ["puyan", "埔鹽"] },
+            { zh: "彰化縣田中鎮", zip: "520", eng: "Tianzhong Township, Changhua County", cityKey: "changhua", distKeys: ["tianzhong", "田中"] },
+            { zh: "彰化縣北斗鎮", zip: "521", eng: "Beidou Township, Changhua County", cityKey: "changhua", distKeys: ["beidou", "北斗"] },
+            { zh: "彰化縣田尾鄉", zip: "522", eng: "Tianwei Township, Changhua County", cityKey: "changhua", distKeys: ["tianwei", "田尾"] },
+            { zh: "彰化縣埤頭鄉", zip: "523", eng: "Pitou Township, Changhua County", cityKey: "changhua", distKeys: ["pitou", "埤頭"] },
+            { zh: "彰化縣溪州鄉", zip: "524", eng: "Xizhou Township, Changhua County", cityKey: "changhua", distKeys: ["xizhou", "溪州"] },
+            { zh: "彰化縣竹塘鄉", zip: "525", eng: "Zhutang Township, Changhua County", cityKey: "changhua", distKeys: ["zhhutang", "竹塘"] },
+            { zh: "彰化縣二林鎮", zip: "526", eng: "Erlin Township, Changhua County", cityKey: "changhua", distKeys: ["erlin", "二林"] },
+            { zh: "彰化縣大城鄉", zip: "527", eng: "Dacheng Township, Changhua County", cityKey: "changhua", distKeys: ["dacheng", "大城"] },
+            { zh: "彰化縣芳苑鄉", zip: "528", eng: "Fangyuan Township, Changhua County", cityKey: "changhua", distKeys: ["fangyuan", "芳苑"] },
+            { zh: "彰化縣二水鄉", zip: "530", eng: "Eshui Township, Changhua County", cityKey: "changhua", distKeys: ["eshui", "二水"] },
+
+            // 南投縣
+            { zh: "南投縣南投市", zip: "540", eng: "Nantou City, Nantou County", cityKey: "nantou", distKeys: ["nantou", "南投"] },
+            { zh: "南投縣中寮鄉", zip: "541", eng: "Zhongliao Township, Nantou County", cityKey: "nantou", distKeys: ["zhongliao", "中寮"] },
+            { zh: "南投縣草屯鎮", zip: "542", eng: "Caozhun Township, Nantou County", cityKey: "nantou", distKeys: ["caozhun", "草屯"] },
+            { zh: "南投縣國姓鄉", zip: "544", eng: "Guoxing Township, Nantou County", cityKey: "nantou", distKeys: ["guoxing", "國姓"] },
+            { zh: "南投縣埔里鎮", zip: "545", eng: "Puli Township, Nantou County", cityKey: "nantou", distKeys: ["puli", "埔里"] },
+            { zh: "南投縣仁愛鄉", zip: "546", eng: "Ren-ai Township, Nantou County", cityKey: "nantou", distKeys: ["ren-ai", "仁愛"] },
+            { zh: "南投縣名間鄉", zip: "551", eng: "Mingjian Township, Nantou County", cityKey: "nantou", distKeys: ["mingjian", "名間"] },
+            { zh: "南投縣集集鎮", zip: "552", eng: "Jiji Township, Nantou County", cityKey: "nantou", distKeys: ["jiji", "集集"] },
+            { zh: "南投縣水里鄉", zip: "553", eng: "Shuili Township, Nantou County", cityKey: "nantou", distKeys: ["shuili", "水里"] },
+            { zh: "南投縣魚池鄉", zip: "555", eng: "Yuchi Township, Nantou County", cityKey: "nantou", distKeys: ["yuchi", "魚池"] },
+            { zh: "南投縣信義鄉", zip: "556", eng: "Xinyi Township, Nantou County", cityKey: "nantou", distKeys: ["xinyi", "信義"] },
+            { zh: "南投縣竹山鎮", zip: "557", eng: "Zhushan Township, Nantou County", cityKey: "nantou", distKeys: ["zhushan", "竹山"] },
+            { zh: "南投縣鹿谷鄉", zip: "558", eng: "Lugu Township, Nantou County", cityKey: "nantou", distKeys: ["lugu", "鹿谷"] },
+
+            // 雲林縣
+            { zh: "雲林縣斗南鎮", zip: "630", eng: "Dounan Township, Yunlin County", cityKey: "yunlin", distKeys: ["dounan", "斗南"] },
+            { zh: "雲林縣大埤鄉", zip: "631", eng: "Dapi Township, Yunlin County", cityKey: "yunlin", distKeys: ["dapi", "大埤"] },
+            { zh: "雲林縣虎尾鎮", zip: "632", eng: "Huwei Township, Yunlin County", cityKey: "yunlin", distKeys: ["huwei", "虎尾"] },
+            { zh: "雲林縣土庫鎮", zip: "633", eng: "Tuku Township, Yunlin County", cityKey: "yunlin", distKeys: ["tuku", "土庫"] },
+            { zh: "雲林縣褒忠鄉", zip: "634", eng: "Baozhong Township, Yunlin County", cityKey: "yunlin", distKeys: ["baozhong", "褒忠"] },
+            { zh: "雲林縣東勢鄉", zip: "635", eng: "Dongshi Township, Yunlin County", cityKey: "yunlin", distKeys: ["dongshi", "東勢"] },
+            { zh: "雲林縣臺西鄉", zip: "636", eng: "Taixi Township, Yunlin County", cityKey: "yunlin", distKeys: ["taixi", "臺西"] },
+            { zh: "雲林縣崙背鄉", zip: "637", eng: "Lunbei Township, Yunlin County", cityKey: "yunlin", distKeys: ["lunbei", "崙背"] },
+            { zh: "雲林縣麥寮鄉", zip: "638", eng: "Mailiao Township, Yunlin County", cityKey: "yunlin", distKeys: ["mailiao", "麥寮"] },
+            { zh: "雲林縣斗六市", zip: "640", eng: "Douliu City, Yunlin County", cityKey: "yunlin", distKeys: ["douliu", "斗六"] },
+            { zh: "雲林縣林內鄉", zip: "643", eng: "Linnei Township, Yunlin County", cityKey: "yunlin", distKeys: ["linnei", "林內"] },
+            { zh: "雲林縣古坑鄉", zip: "646", eng: "Gukeng Township, Yunlin County", cityKey: "yunlin", distKeys: ["gukeng", "古坑"] },
+            { zh: "雲林縣莿桐鄉", zip: "647", eng: "Citong Township, Yunlin County", cityKey: "yunlin", distKeys: ["citong", "莿桐"] },
+            { zh: "雲林縣西螺鎮", zip: "648", eng: "Xiluo Township, Yunlin County", cityKey: "yunlin", distKeys: ["xiluo", "西螺"] },
+            { zh: "雲林縣二崙鄉", zip: "649", eng: "Erlun Township, Yunlin County", cityKey: "yunlin", distKeys: ["erlun", "二崙"] },
+            { zh: "雲林縣北港鎮", zip: "651", eng: "Beigang Township, Yunlin County", cityKey: "yunlin", distKeys: ["beigang", "北港"] },
+            { zh: "雲林縣水林鄉", zip: "652", eng: "Shuilin Township, Yunlin County", cityKey: "yunlin", distKeys: ["shuilin", "水林"] },
+            { zh: "雲林縣口湖鄉", zip: "653", eng: "Kouhu Township, Yunlin County", cityKey: "yunlin", distKeys: ["kouhu", "口湖"] },
+            { zh: "雲林縣四湖鄉", zip: "654", eng: "Sihu Township, Yunlin County", cityKey: "yunlin", distKeys: ["sihu", "四湖"] },
+            { zh: "雲林縣元長鄉", zip: "655", eng: "Yuanchang Township, Yunlin County", cityKey: "yunlin", distKeys: ["yuanchang", "元長"] },
+
+            // 嘉義市、嘉義縣
+            { zh: "嘉義市東區", zip: "600", eng: "East Dist., Chiayi City", cityKey: "chiayi city", distKeys: ["east", "東區"] },
+            { zh: "嘉義市西區", zip: "600", eng: "West Dist., Chiayi City", cityKey: "chiayi city", distKeys: ["west", "西區"] },
+            { zh: "嘉義縣番路鄉", zip: "602", eng: "Fanlu Township, Chiayi County", cityKey: "chiayi county", distKeys: ["fanlu", "番路"] },
+            { zh: "嘉義縣梅山鄉", zip: "603", eng: "Meishan Township, Chiayi County", cityKey: "chiayi county", distKeys: ["meishan", "梅山"] },
+            { zh: "嘉義縣竹崎鄉", zip: "604", eng: "Zhuqi Township, Chiayi County", cityKey: "chiayi county", distKeys: ["zhuqi", "竹崎"] },
+            { zh: "嘉義縣阿里山鄉", zip: "605", eng: "Alishan Township, Chiayi County", cityKey: "chiayi county", distKeys: ["alishan", "阿里山"] },
+            { zh: "嘉義縣中埔鄉", zip: "606", eng: "Zhongpu Township, Chiayi County", cityKey: "chiayi county", distKeys: ["zhongpu", "中埔"] },
+            { zh: "嘉義縣大埔鄉", zip: "607", eng: "Dapu Township, Chiayi County", cityKey: "chiayi county", distKeys: ["dapu", "大埔"] },
+            { zh: "嘉義縣水上鄉", zip: "608", eng: "Shuishang Township, Chiayi County", cityKey: "chiayi county", distKeys: ["shuishang", "水上"] },
+            { zh: "嘉義縣鹿草鄉", zip: "611", eng: "Lucao Township, Chiayi County", cityKey: "chiayi county", distKeys: ["lucao", "鹿草"] },
+            { zh: "嘉義縣太保市", zip: "612", eng: "Taibao City, Chiayi County", cityKey: "chiayi county", distKeys: ["taibao", "太保"] },
+            { zh: "嘉義縣朴子市", zip: "613", eng: "Puzi City, Chiayi County", cityKey: "chiayi county", distKeys: ["puzi", "朴子"] },
+            { zh: "嘉義縣東石鄉", zip: "614", eng: "Dongshi Township, Chiayi County", cityKey: "chiayi county", distKeys: ["dongshi", "東石"] },
+            { zh: "嘉義縣六腳鄉", zip: "615", eng: "Liujiao Township, Chiayi County", cityKey: "chiayi county", distKeys: ["liujiao", "六腳"] },
+            { zh: "嘉義縣新港鄉", zip: "616", eng: "Xingang Township, Chiayi County", cityKey: "chiayi county", distKeys: ["xingang", "新港"] },
+            { zh: "嘉義縣民雄鄉", zip: "621", eng: "Minxiong Township, Chiayi County", cityKey: "chiayi county", distKeys: ["minxiong", "民雄"] },
+            { zh: "嘉義縣大林鎮", zip: "622", eng: "Dalin Township, Chiayi County", cityKey: "chiayi county", distKeys: ["dalin", "大林"] },
+            { zh: "嘉義縣溪口鄉", zip: "623", eng: "Xikou Township, Chiayi County", cityKey: "chiayi county", distKeys: ["xikou", "溪口"] },
+            { zh: "嘉義縣義竹鄉", zip: "624", eng: "Yizhu Township, Chiayi County", cityKey: "chiayi county", distKeys: ["yizhu", "義竹"] },
+            { zh: "嘉義縣布袋鎮", zip: "625", eng: "Budai Township, Chiayi County", cityKey: "chiayi county", distKeys: ["budai", "布袋"] },
+
+            // 臺南市
+            { zh: "臺南市中西區", zip: "700", eng: "West Central Dist., Tainan City", cityKey: "tainan", distKeys: ["west central", "中西"] },
+            { zh: "臺南市東區", zip: "701", eng: "East Dist., Tainan City", cityKey: "tainan", distKeys: ["east", "東區"] },
+            { zh: "臺南市南區", zip: "702", eng: "South Dist., Tainan City", cityKey: "tainan", distKeys: ["south", "南區"] },
+            { zh: "臺南市北區", zip: "704", eng: "North Dist., Tainan City", cityKey: "tainan", distKeys: ["north", "北區"] },
+            { zh: "臺南市安平區", zip: "708", eng: "Anping Dist., Tainan City", cityKey: "tainan", distKeys: ["anping", "安平"] },
+            { zh: "臺南市安南區", zip: "709", eng: "Annan Dist., Tainan City", cityKey: "tainan", distKeys: ["annan", "安南"] },
+            { zh: "臺南市永康區", zip: "710", eng: "Yongkang Dist., Tainan City", cityKey: "tainan", distKeys: ["yongkang", "永康"] },
+            { zh: "臺南市歸仁區", zip: "711", eng: "Guiren Dist., Tainan City", cityKey: "tainan", distKeys: ["guiren", "歸仁"] },
+            { zh: "臺南市新化區", zip: "712", eng: "Xinhua Dist., Tainan City", cityKey: "tainan", distKeys: ["xinhua", "新化"] },
+            { zh: "臺南市左鎮區", zip: "713", eng: "Zuojhen Dist., Tainan City", cityKey: "tainan", distKeys: ["zuojhen", "左鎮"] },
+            { zh: "臺南市玉井區", zip: "714", eng: "Yujing Dist., Tainan City", cityKey: "tainan", distKeys: ["yujing", "玉井"] },
+            { zh: "臺南市楠西區", zip: "715", eng: "Nansi Dist., Tainan City", cityKey: "tainan", distKeys: ["nansi", "楠西"] },
+            { zh: "臺南市南化區", zip: "716", eng: "Nanhua Dist., Tainan City", cityKey: "tainan", distKeys: ["nanhua", "南化"] },
+            { zh: "臺南市仁德區", zip: "717", eng: "Rende Dist., Tainan City", cityKey: "tainan", distKeys: ["rende", "仁德"] },
+            { zh: "臺南市關廟區", zip: "718", eng: "Guanmiao Dist., Tainan City", cityKey: "tainan", distKeys: ["guanmiao", "關廟"] },
+            { zh: "臺南市龍崎區", zip: "719", eng: "Longqi Dist., Tainan City", cityKey: "tainan", distKeys: ["longqi", "龍崎"] },
+            { zh: "臺南市官田區", zip: "720", eng: "Guantian Dist., Tainan City", cityKey: "tainan", distKeys: ["guantian", "官田"] },
+            { zh: "臺南市麻豆區", zip: "721", eng: "Madou Dist., Tainan City", cityKey: "tainan", distKeys: ["madou", "麻豆"] },
+            { zh: "臺南市佳里區", zip: "722", eng: "Jiali Dist., Tainan City", cityKey: "tainan", distKeys: ["jiali", "佳里"] },
+            { zh: "臺南市西港區", zip: "723", eng: "Sigang Dist., Tainan City", cityKey: "tainan", distKeys: ["sigang", "西港"] },
+            { zh: "臺南市七股區", zip: "724", eng: "Qigu Dist., Tainan City", cityKey: "tainan", distKeys: ["qigu", "七股"] },
+            { zh: "臺南市將軍區", zip: "725", eng: "Jiangjun Dist., Tainan City", cityKey: "tainan", distKeys: ["jiangjun", "將軍"] },
+            { zh: "臺南市學甲區", zip: "726", eng: "Xuejia Dist., Tainan City", cityKey: "tainan", distKeys: ["xuejia", "學甲"] },
+            { zh: "臺南市北門區", zip: "727", eng: "Beimen Dist., Tainan City", cityKey: "tainan", distKeys: ["beimen", "北門"] },
+            { zh: "臺南市新營區", zip: "730", eng: "Xinying Dist., Tainan City", cityKey: "tainan", distKeys: ["xinying", "新營"] },
+            { zh: "臺南市後壁區", zip: "731", eng: "Houbi Dist., Tainan City", cityKey: "tainan", distKeys: ["houbi", "後壁"] },
+            { zh: "臺南市白河區", zip: "732", eng: "Bahe Dist., Tainan City", cityKey: "tainan", distKeys: ["bahe", "白河"] },
+            { zh: "臺南市東山區", zip: "733", eng: "Dongshan Dist., Tainan City", cityKey: "tainan", distKeys: ["dongshan", "東山"] },
+            { zh: "臺南市六甲區", zip: "734", eng: "Liujia Dist., Tainan City", cityKey: "tainan", distKeys: ["liujia", "六甲"] },
+            { zh: "臺南市下營區", zip: "735", eng: "Xiaying Dist., Tainan City", cityKey: "tainan", distKeys: ["xiaying", "下營"] },
+            { zh: "臺南市柳營區", zip: "736", eng: "Liuying Dist., Tainan City", cityKey: "tainan", distKeys: ["liuying", "柳營"] },
+            { zh: "臺南市鹽水區", zip: "737", eng: "Yanshui Dist., Tainan City", cityKey: "tainan", distKeys: ["yanshui", "鹽水"] },
+            { zh: "臺南市善化區", zip: "741", eng: "Shanhua Dist., Tainan City", cityKey: "tainan", distKeys: ["shanhua", "善化"] },
+            { zh: "臺南市大內區", zip: "742", eng: "Danei Dist., Tainan City", cityKey: "tainan", distKeys: ["danei", "大內"] },
+            { zh: "臺南市山上區", zip: "743", eng: "Shanshang Dist., Tainan City", cityKey: "tainan", distKeys: ["shanshang", "山上"] },
+            { zh: "臺南市新市區", zip: "744", eng: "Xinshi Dist., Tainan City", cityKey: "tainan", distKeys: ["xinshi", "新市"] },
+            { zh: "臺南市安定區", zip: "745", eng: "Anding Dist., Tainan City", cityKey: "tainan", distKeys: ["anding", "安定"] },
+
+            // 高雄市
+            { zh: "高雄市新興區", zip: "800", eng: "Xinxing Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["xinxing", "新興"] },
+            { zh: "高雄市前金區", zip: "801", eng: "Qianjin Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qianjin", "前金"] },
+            { zh: "高雄市苓雅區", zip: "802", eng: "Lingya Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["lingya", "苓雅"] },
+            { zh: "高雄市鹽埕區", zip: "803", eng: "Yancheng Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["yancheng", "鹽埕"] },
+            { zh: "高雄市鼓山區", zip: "804", eng: "Gushan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["gushan", "鼓山"] },
+            { zh: "高雄市旗津區", zip: "805", eng: "Qijin Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qijin", "旗津"] },
+            { zh: "高雄市前鎮區", zip: "806", eng: "Qianzhen Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qianzhen", "前鎮"] },
+            { zh: "高雄市三民區", zip: "807", eng: "Sanmin Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["sanmin", "三民"] },
+            { zh: "高雄市楠梓區", zip: "811", eng: "Nanzih Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["nanzih", "楠梓"] },
+            { zh: "高雄市小港區", zip: "812", eng: "Siaogang Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["siaogang", "小港"] },
+            { zh: "高雄市左營區", zip: "813", eng: "Zuoying Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["zuoying", "左營"] },
+            { zh: "高雄市仁武區", zip: "814", eng: "Renwu Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["renwu", "仁武"] },
+            { zh: "高雄市大社區", zip: "815", eng: "Dashe Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["dashe", "大社"] },
+            { zh: "高雄市岡山區", zip: "820", eng: "Gangshan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["gangshan", "岡山"] },
+            { zh: "高雄市路竹區", zip: "821", eng: "Luzhu Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["luzhu", "路竹"] },
+            { zh: "高雄市阿蓮區", zip: "822", eng: "Alian Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["alian", "阿蓮"] },
+            { zh: "高雄市田寮區", zip: "823", eng: "Tianliao Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["tianliao", "田寮"] },
+            { zh: "高雄市燕巢區", zip: "824", eng: "Yanchao Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["yanchao", "燕巢"] },
+            { zh: "高雄市橋頭區", zip: "825", eng: "Qiaotou Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qiaotou", "橋頭"] },
+            { zh: "高雄市梓官區", zip: "826", eng: "Ziguan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["ziguan", "梓官"] },
+            { zh: "高雄市彌陀區", zip: "827", eng: "Mituo Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["mituo", "彌陀"] },
+            { zh: "高雄市永安區", zip: "828", eng: "Yongan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["yongan", "永安"] },
+            { zh: "高雄市湖內區", zip: "829", eng: "Hunei Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["hunei", "湖內"] },
+            { zh: "高雄市鳳山區", zip: "830", eng: "Fengshan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["fengshan", "鳳山"] },
+            { zh: "高雄市大寮區", zip: "831", eng: "Daliao Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["daliao", "大寮"] },
+            { zh: "高雄市林園區", zip: "832", eng: "Linyuan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["linyuan", "林園"] },
+            { zh: "高雄市鳥松區", zip: "833", eng: "Niaosong Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["niaosong", "鳥松"] },
+            { zh: "高雄市大樹區", zip: "840", eng: "Dashu Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["dashu", "大樹"] },
+            { zh: "高雄市旗山區", zip: "842", eng: "Qishan Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qishan", "旗山"] },
+            { zh: "高雄市美濃區", zip: "843", eng: "Meinong Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["meinong", "美濃"] },
+            { zh: "高雄市六龜區", zip: "844", eng: "Liugui Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["liugui", "六龜"] },
+            { zh: "高雄市內門區", zip: "845", eng: "Neimen Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["neimen", "內門"] },
+            { zh: "高雄市杉林區", zip: "846", eng: "Shanlin Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["shanlin", "杉林"] },
+            { zh: "高雄市甲仙區", zip: "847", eng: "Jiasian Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["jiasian", "甲仙"] },
+            { zh: "高雄市桃源區", zip: "848", eng: "Namaxia Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["namaxia", "桃源"] },
+            { zh: "高雄市茂林區", zip: "851", eng: "Maolin Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["maolin", "茂林"] },
+            { zh: "高雄市茄萣區", zip: "852", eng: "Qieding Dist., Kaohsiung City", cityKey: "kaohsiung", distKeys: ["qieding", "茄萣"] },
+
+            // 屏東縣
+            { zh: "屏東縣屏東市", zip: "900", eng: "Pingtung City, Pingtung County", cityKey: "pingtung", distKeys: ["pingtung", "屏東"] },
+            { zh: "屏東縣三地門鄉", zip: "901", eng: "Sandimen Township, Pingtung County", cityKey: "pingtung", distKeys: ["sandimen", "三地門"] },
+            { zh: "屏東縣霧臺鄉", zip: "902", eng: "Wutai Township, Pingtung County", cityKey: "pingtung", distKeys: ["wutai", "霧臺"] },
+            { zh: "屏東縣瑪家鄉", zip: "903", eng: "Majia Township, Pingtung County", cityKey: "pingtung", distKeys: ["majia", "瑪家"] },
+            { zh: "屏東縣九如鄉", zip: "904", eng: "Jiuru Township, Pingtung County", cityKey: "pingtung", distKeys: ["jiuru", "九如"] },
+            { zh: "屏東縣里港鄉", zip: "905", eng: "Ligang Township, Pingtung County", cityKey: "pingtung", distKeys: ["ligang", "里港"] },
+            { zh: "屏東縣高樹鄉", zip: "906", eng: "Gaoshu Township, Pingtung County", cityKey: "pingtung", distKeys: ["gaoshu", "高樹"] },
+            { zh: "屏東縣鹽埔鄉", zip: "907", eng: "Yanpu Township, Pingtung County", cityKey: "pingtung", distKeys: ["yanpu", "鹽埔"] },
+            { zh: "屏東縣長治鄉", zip: "908", eng: "Changzhi Township, Pingtung County", cityKey: "pingtung", distKeys: ["changzhi", "長治"] },
+            { zh: "屏東縣麟洛鄉", zip: "909", eng: "Linluo Township, Pingtung County", cityKey: "pingtung", distKeys: ["linluo", "麟洛"] },
+            { zh: "屏東縣竹田鄉", zip: "911", eng: "Zhutian Township, Pingtung County", cityKey: "pingtung", distKeys: ["zhutian", "竹田"] },
+            { zh: "屏東縣內埔鄉", zip: "912", eng: "Neipu Township, Pingtung County", cityKey: "pingtung", distKeys: ["neipu", "內埔"] },
+            { zh: "屏東縣萬丹鄉", zip: "913", eng: "Wandan Township, Pingtung County", cityKey: "pingtung", distKeys: ["wandan", "萬丹"] },
+            { zh: "屏東縣潮州鎮", zip: "920", eng: "Chaozhou Township, Pingtung County", cityKey: "pingtung", distKeys: ["chaozhou", "潮州"] },
+            { zh: "屏東縣泰武鄉", zip: "921", eng: "Taiwu Township, Pingtung County", cityKey: "pingtung", distKeys: ["taiwu", "泰武"] },
+            { zh: "屏東縣來義鄉", zip: "922", eng: "Laiyi Township, Pingtung County", cityKey: "pingtung", distKeys: ["laiyi", "來義"] },
+            { zh: "屏東縣萬巒鄉", zip: "923", eng: "Wanluan Township, Pingtung County", cityKey: "pingtung", distKeys: ["wanluan", "萬巒"] },
+            { zh: "屏東縣崁頂鄉", zip: "924", eng: "Kanding Township, Pingtung County", cityKey: "pingtung", distKeys: ["kanding", "崁頂"] },
+            { zh: "屏東縣新埤鄉", zip: "925", eng: "Xinpi Township, Pingtung County", cityKey: "pingtung", distKeys: ["xinpi", "新埤"] },
+            { zh: "屏東縣南州鄉", zip: "926", eng: "Nanzhou Township, Pingtung County", cityKey: "pingtung", distKeys: ["nanzhou", "南州"] },
+            { zh: "屏東縣林邊鄉", zip: "927", eng: "Linbian Township, Pingtung County", cityKey: "pingtung", distKeys: ["linbian", "林邊"] },
+            { zh: "屏東縣東港鎮", zip: "928", eng: "Donggang Township, Pingtung County", cityKey: "pingtung", distKeys: ["donggang", "東港"] },
+            { zh: "屏東縣琉球鄉", zip: "929", eng: "Liuqiu Township, Pingtung County", cityKey: "pingtung", distKeys: ["liuqiu", "琉球"] },
+            { zh: "屏東縣佳冬鄉", zip: "931", eng: "Jiadong Township, Pingtung County", cityKey: "pingtung", distKeys: ["jiadong", "佳冬"] },
+            { zh: "屏東縣新園鄉", zip: "932", eng: "Xinyuan Township, Pingtung County", cityKey: "pingtung", distKeys: ["xinyuan", "新園"] },
+            { zh: "屏東縣枋寮鄉", zip: "940", eng: "Fangliao Township, Pingtung County", cityKey: "pingtung", distKeys: ["fangliao", "枋寮"] },
+            { zh: "屏東縣枋山鄉", zip: "941", eng: "Fangshan Township, Pingtung County", cityKey: "pingtung", distKeys: ["fangshan", "枋山"] },
+            { zh: "屏東縣春日鄉", zip: "942", eng: "Chunri Township, Pingtung County", cityKey: "pingtung", distKeys: ["chunri", "春日"] },
+            { zh: "屏東縣獅子鄉", zip: "943", eng: "Shizi Township, Pingtung County", cityKey: "pingtung", distKeys: ["shizi", "獅子"] },
+            { zh: "屏東縣車城鄉", zip: "944", eng: "Checheng Township, Pingtung County", cityKey: "pingtung", distKeys: ["checheng", "車城"] },
+            { zh: "屏東縣牡丹鄉", zip: "945", eng: "Mudan Township, Pingtung County", cityKey: "pingtung", distKeys: ["mudan", "牡丹"] },
+            { zh: "屏東縣恆春鎮", zip: "946", eng: "Hengchun Township, Pingtung County", cityKey: "pingtung", distKeys: ["hengchun", "恆春"] },
+            { zh: "屏東縣滿州鄉", zip: "947", eng: "Manzhou Township, Pingtung County", cityKey: "pingtung", distKeys: ["manzhou", "滿州"] },
+
+            // 宜蘭縣
+            { zh: "宜蘭縣宜蘭市", zip: "260", eng: "Yilan City, Yilan County", cityKey: "yilan", distKeys: ["yilan", "宜蘭"] },
+            { zh: "宜蘭縣頭城鎮", zip: "261", eng: "Toucheng Township, Yilan County", cityKey: "yilan", distKeys: ["toucheng", "頭城"] },
+            { zh: "宜蘭縣礁溪鄉", zip: "262", eng: "Jiaoxi Township, Yilan County", cityKey: "yilan", distKeys: ["jiaoxi", "礁溪"] },
+            { zh: "宜蘭縣壯圍鄉", zip: "263", eng: "Zhuangwei Township, Yilan County", cityKey: "yilan", distKeys: ["zhuangwei", "壯圍"] },
+            { zh: "宜蘭縣員山鄉", zip: "264", eng: "Yuanshan Township, Yilan County", cityKey: "yilan", distKeys: ["yuanshan", "員山"] },
+            { zh: "宜蘭縣羅東鎮", zip: "265", eng: "Luodong Township, Yilan County", cityKey: "yilan", distKeys: ["luodong", "羅東"] },
+            { zh: "宜蘭縣三星鄉", zip: "266", eng: "Sanxing Township, Yilan County", cityKey: "yilan", distKeys: ["sanxing", "三星"] },
+            { zh: "宜蘭縣大同鄉", zip: "267", eng: "Datong Township, Yilan County", cityKey: "yilan", distKeys: ["datong", "大同"] },
+            { zh: "宜蘭縣五結鄉", zip: "268", eng: "Wujie Township, Yilan County", cityKey: "yilan", distKeys: ["wujie", "五結"] },
+            { zh: "宜蘭縣冬山鄉", zip: "269", eng: "Dongshan Township, Yilan County", cityKey: "yilan", distKeys: ["dongshan", "冬山"] },
+            { zh: "宜蘭縣蘇澳鎮", zip: "270", eng: "Su-ao Township, Yilan County", cityKey: "yilan", distKeys: ["su-ao", "蘇澳"] },
+            { zh: "宜蘭縣南澳鄉", zip: "272", eng: "Nan-ao Township, Yilan County", cityKey: "yilan", distKeys: ["nan-ao", "南澳"] },
+
+            // 花蓮縣
+            { zh: "花蓮縣花蓮市", zip: "970", eng: "Hualien City, Hualien County", cityKey: "hualien", distKeys: ["hualien", "花蓮"] },
+            { zh: "花蓮縣新城鄉", zip: "971", eng: "Xincheng Township, Hualien County", cityKey: "hualien", distKeys: ["xincheng", "新城"] },
+            { zh: "花蓮縣秀林鄉", zip: "972", eng: "Xiulin Township, Hualien County", cityKey: "hualien", distKeys: ["xiulin", "秀林"] },
+            { zh: "花蓮縣吉安鄉", zip: "973", eng: "Jian Township, Hualien County", cityKey: "hualien", distKeys: ["jian", "吉安"] },
+            { zh: "花蓮縣壽豐鄉", zip: "974", eng: "Shoufeng Township, Hualien County", cityKey: "hualien", distKeys: ["shoufeng", "壽豐"] },
+            { zh: "花蓮縣鳳林鎮", zip: "975", eng: "Fenglin Township, Hualien County", cityKey: "hualien", distKeys: ["fenglin", "鳳林"] },
+            { zh: "花蓮縣光復鄉", zip: "976", eng: "Guangfu Township, Hualien County", cityKey: "hualien", distKeys: ["guangfu", "光復"] },
+            { zh: "花蓮縣豐濱鄉", zip: "977", eng: "Fengbin Township, Hualien County", cityKey: "hualien", distKeys: ["fengbin", "豐濱"] },
+            { zh: "花蓮縣瑞穗鄉", zip: "978", eng: "Ruisui Township, Hualien County", cityKey: "hualien", distKeys: ["ruisui", "瑞穗"] },
+            { zh: "花蓮縣萬榮鄉", zip: "979", eng: "Wanrong Township, Hualien County", cityKey: "hualien", distKeys: ["wanrong", "萬榮"] },
+            { zh: "花蓮縣玉里鎮", zip: "981", eng: "Yuli Township, Hualien County", cityKey: "hualien", distKeys: ["yuli", "玉里"] },
+            { zh: "花蓮縣卓溪鄉", zip: "982", eng: "Zhuoxi Township, Hualien County", cityKey: "hualien", distKeys: ["zhuoxi", "卓溪"] },
+            { zh: "花蓮縣富里鄉", zip: "983", eng: "Fuli Township, Hualien County", cityKey: "hualien", distKeys: ["fuli", "富里"] },
+
+            // 臺東縣
+            { zh: "臺東縣臺東市", zip: "950", eng: "Taitung City, Taitung County", cityKey: "taitung", distKeys: ["taitung", "臺東", "台東"] },
+            { zh: "臺東縣綠島鄉", zip: "951", eng: "Ludao Township, Taitung County", cityKey: "taitung", distKeys: ["ludao", "綠島"] },
+            { zh: "臺東縣蘭嶼鄉", zip: "952", eng: "Lanyu Township, Taitung County", cityKey: "taitung", distKeys: ["lanyu", "蘭嶼"] },
+            { zh: "臺東縣延平鄉", zip: "953", eng: "Yanping Township, Taitung County", cityKey: "taitung", distKeys: ["yanping", "延平"] },
+            { zh: "臺東縣卑南鄉", zip: "954", eng: "Beinan Township, Taitung County", cityKey: "taitung", distKeys: ["beinan", "卑南"] },
+            { zh: "臺東縣鹿野鄉", zip: "955", eng: "Luye Township, Taitung County", cityKey: "taitung", distKeys: ["luye", "鹿野"] },
+            { zh: "臺東縣關山鎮", zip: "956", eng: "Guanshan Township, Taitung County", cityKey: "taitung", distKeys: ["guanshan", "關山"] },
+            { zh: "臺東縣海端鄉", zip: "957", eng: "Haiduan Township, Taitung County", cityKey: "taitung", distKeys: ["haiduan", "海端"] },
+            { zh: "臺東縣池上鄉", zip: "958", eng: "Chishang Township, Taitung County", cityKey: "taitung", distKeys: ["chishang", "池上"] },
+            { zh: "臺東縣東河鄉", zip: "959", eng: "Donghe Township, Taitung County", cityKey: "taitung", distKeys: ["donghe", "東河"] },
+            { zh: "臺東縣成功鎮", zip: "961", eng: "Chenggong Township, Taitung County", cityKey: "taitung", distKeys: ["chenggong", "成功"] },
+            { zh: "臺東縣長濱鄉", zip: "962", eng: "Changbin Township, Taitung County", cityKey: "taitung", distKeys: ["changbin", "長濱"] },
+            { zh: "臺東縣太麻里鄉", zip: "963", eng: "Taimali Township, Taitung County", cityKey: "taitung", distKeys: ["taimali", "太麻里"] },
+            { zh: "臺東縣金峰鄉", zip: "964", eng: "Jinfeng Township, Taitung County", cityKey: "taitung", distKeys: ["jinfeng", "金峰"] },
+            { zh: "臺東縣大武鄉", zip: "965", eng: "Dawu Township, Taitung County", cityKey: "taitung", distKeys: ["dawu", "大武"] },
+            { zh: "臺東縣達仁鄉", zip: "966", eng: "Daren Township, Taitung County", cityKey: "taitung", distKeys: ["daren", "達仁"] },
+
+            // 金門縣、澎湖縣、連江縣
+            { zh: "金門縣金沙鎮", zip: "890", eng: "Jinsha Township, Kinmen County", cityKey: "kinmen", distKeys: ["jinsha", "金沙"] },
+            { zh: "金門縣金湖鎮", zip: "891", eng: "Jinhu Township, Kinmen County", cityKey: "kinmen", distKeys: ["jinhu", "金湖"] },
+            { zh: "金門縣金寧鄉", zip: "892", eng: "Jinning Township, Kinmen County", cityKey: "kinmen", distKeys: ["jinning", "金寧"] },
+            { zh: "金門縣金城鎮", zip: "893", eng: "Jincheng Township, Kinmen County", cityKey: "kinmen", distKeys: ["jincheng", "金城"] },
+            { zh: "金門縣烈嶼鄉", zip: "894", eng: "Lietyu Township, Kinmen County", cityKey: "kinmen", distKeys: ["lietyu", "烈嶼"] },
+            { zh: "金門縣烏坵鄉", zip: "896", eng: "Wuqiu Township, Kinmen County", cityKey: "kinmen", distKeys: ["wuqiu", "烏坵"] },
+            { zh: "澎湖縣馬公市", zip: "880", eng: "Magong City, Penghu County", cityKey: "penghu", distKeys: ["magong", "馬公"] },
+            { zh: "澎湖縣西嶼鄉", zip: "881", eng: "Siyu Township, Penghu County", cityKey: "penghu", distKeys: ["siyu", "西嶼"] },
+            { zh: "澎湖縣望安鄉", zip: "882", eng: "Wangan Township, Penghu County", cityKey: "penghu", distKeys: ["wangan", "望安"] },
+            { zh: "澎湖縣七美鄉", zip: "883", eng: "Qimei Township, Penghu County", cityKey: "penghu", distKeys: ["qimei", "七美"] },
+            { zh: "澎湖縣白沙鄉", zip: "884", eng: "Baisha Township, Penghu County", cityKey: "penghu", distKeys: ["baisha", "白沙"] },
+            { zh: "澎湖縣湖西鄉", zip: "885", eng: "Huxi Township, Penghu County", cityKey: "penghu", distKeys: ["huxi", "湖西"] },
+            { zh: "連江縣南竿鄉", zip: "209", eng: "Nangan Township, Lienchiang County", cityKey: "lienchiang", distKeys: ["nangan", "南竿"] },
+            { zh: "連江縣北竿鄉", zip: "210", eng: "Beigan Township, Lienchiang County", cityKey: "lienchiang", distKeys: ["beigan", "北竿"] },
+            { zh: "連江縣莒光鄉", zip: "211", eng: "Juguang Township, Lienchiang County", cityKey: "lienchiang", distKeys: ["juguang", "莒光"] },
+            { zh: "連江縣東引鄉", zip: "212", eng: "Dongyin Township, Lienchiang County", cityKey: "lienchiang", distKeys: ["dongyin", "東引"] }
         ];
 
+        // 智慧提取門牌號碼數字
+        function extractHouseNumber(addr) {
+            var fullWidth = "０１２３４５６７８９";
+            var halfWidth = "0123456789";
+            for (var i = 0; i < fullWidth.length; i++) {
+                addr = addr.split(fullWidth[i]).join(halfWidth[i]);
+            }
+            var match = addr.match(/(\d+)\s*號/);
+            if (match) return parseInt(match[1], 10);
+            match = addr.match(/No\.?\s*(\d+)/i);
+            if (match) return parseInt(match[1], 10);
+            match = addr.match(/(\d+)\s*(?:Sec|Section|Rd|Street|St)/i);
+            if (match) return parseInt(match[1], 10);
+            match = addr.match(/^(\d+)[\,\s]+/);
+            if (match) return parseInt(match[1], 10);
+            return 0;
+        }
+
+        // 核心解析邏輯：雙語、多重可能區域歧義檢測與門牌比對引擎
+        function parseTaiwanAddress(addr) {
+            addr = String(addr).trim();
+            var houseNum = extractHouseNumber(addr);
+            var isOdd = (houseNum % 2 !== 0);
+
+            function has(str) { return addr.toLowerCase().indexOf(str.toLowerCase()) !== -1; }
+
+            // Step 1: 最高優先權 — 當輸入包含明確「縣市(City) + 行政區(Dist)」時，鎖定單一結果
+            for (let item of TAIWAN_DISTRICTS) {
+                if (item.cityKey && has(item.cityKey)) {
+                    for (let dKey of item.distKeys) {
+                        if (has(dKey)) {
+                            return { isMultiple: false, zip: item.zip, dist: item.zh, eng: item.eng, note: `${item.zh} (縣市+行政區明確匹配)` };
+                        }
+                    }
+                }
+            }
+
+            // Step 2: 台北市跨區複雜路段門牌判定
+            if (has("中山北路七段") || (has("Zhongshan") && (has("Sec. 7") || has("Sec 7") || has("Section 7")))) {
+                if (has("219巷3弄") || (has("219") && has("3") && (has("Aly") || has("弄")))) {
+                    return { isMultiple: false, zip: "112", dist: "臺北市北投區", eng: "Beitou Dist., Taipei City", note: "219巷3弄歸北投區" };
+                }
+                return { isMultiple: false, zip: "111", dist: "臺北市士林區", eng: "Shilin Dist., Taipei City", note: "其餘歸士林區" };
+            }
+            if (has("中山北路六段") || (has("Zhongshan") && (has("Sec. 6") || has("Sec 6")))) return { isMultiple: false, zip: "111", dist: "臺北市士林區", eng: "Shilin Dist., Taipei City" };
+            if (has("中山北路五段") || (has("Zhongshan") && (has("Sec. 5") || has("Sec 5")))) return { isMultiple: false, zip: "111", dist: "臺北市士林區", eng: "Shilin Dist., Taipei City" };
+            if (has("中山北路四段") || (has("Zhongshan") && (has("Sec. 4") || has("Sec 4")))) return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City" };
+            if (has("中山北路三段") || (has("Zhongshan") && (has("Sec. 3") || has("Sec 3")))) return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City" };
+            if (has("中山北路二段") || (has("Zhongshan") && (has("Sec. 2") || has("Sec 2")))) return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City" };
+            if (has("中山北路一段") || (has("Zhongshan") && (has("Sec. 1") || has("Sec 1")))) {
+                if (houseNum > 0) {
+                    if ((isOdd && houseNum <= 50) || (!isOdd && houseNum <= 34)) return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City", note: "單1~50/雙1~34歸中正區" };
+                    return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City", note: "單51以上/雙36以上歸中山區" };
+                }
+                return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City" };
+            }
+
+            // 承德路 (Chengde Rd.)
+            if (has("承德路七段") || (has("Chengde") && (has("Sec. 7") || has("Sec 7")))) return { isMultiple: false, zip: "112", dist: "臺北市北投區", eng: "Beitou Dist., Taipei City" };
+            if (has("承德路六段") || (has("Chengde") && (has("Sec. 6") || has("Sec 6")))) return { isMultiple: false, zip: "112", dist: "臺北市北投區", eng: "Beitou Dist., Taipei City" };
+            if (has("承德路五段") || (has("Chengde") && (has("Sec. 5") || has("Sec 5")))) return { isMultiple: false, zip: "111", dist: "臺北市士林區", eng: "Shilin Dist., Taipei City" };
+            if (has("承德路四段") || (has("Chengde") && (has("Sec. 4") || has("Sec 4")))) return { isMultiple: false, zip: "111", dist: "臺北市士林區", eng: "Shilin Dist., Taipei City" };
+            if (has("承德路三段") || (has("Chengde") && (has("Sec. 3") || has("Sec 3")))) return { isMultiple: false, zip: "103", dist: "臺北市大同區", eng: "Datong Dist., Taipei City" };
+            if (has("承德路二段") || (has("Chengde") && (has("Sec. 2") || has("Sec 2")))) return { isMultiple: false, zip: "103", dist: "臺北市大同區", eng: "Datong Dist., Taipei City" };
+            if (has("承德路一段") || (has("Chengde") && (has("Sec. 1") || has("Sec 1")))) return { isMultiple: false, zip: "103", dist: "臺北市大同區", eng: "Datong Dist., Taipei City" };
+
+            // 忠孝東路 (Zhongxiao E. Rd.)
+            if (has("忠孝東路一段") || (has("Zhongxiao") && (has("Sec. 1") || has("Sec 1")))) return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City" };
+            if (has("忠孝東路二段") || (has("Zhongxiao") && (has("Sec. 2") || has("Sec 2")))) {
+                if (houseNum > 0) {
+                    if ((isOdd && houseNum <= 13) || (!isOdd && houseNum <= 14)) return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City", note: "單1~13/雙1~14歸中正區" };
+                    return { isMultiple: false, zip: "106", dist: "臺北市大安區", eng: "Daan Dist., Taipei City", note: "15號以上歸大安區" };
+                }
+                return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City" };
+            }
+            if (has("忠孝東路三段") || has("忠孝東路四段") || (has("Zhongxiao") && (has("Sec. 3")||has("Sec. 4")||has("Sec 3")||has("Sec 4")))) return { isMultiple: false, zip: "106", dist: "臺北市大安區", eng: "Daan Dist., Taipei City" };
+            if (has("忠孝東路五段") || (has("Zhongxiao") && (has("Sec. 5") || has("Sec 5")))) return { isMultiple: false, zip: "110", dist: "臺北市信義區", eng: "Xinyi Dist., Taipei City" };
+            if (has("忠孝東路六段") || has("忠孝東路七段") || (has("Zhongxiao") && (has("Sec. 6")||has("Sec. 7")||has("Sec 6")||has("Sec 7")))) return { isMultiple: false, zip: "115", dist: "臺北市南港區", eng: "Nangang Dist., Taipei City" };
+
+            // 市民大道 (Civic Blvd.)
+            if (has("市民大道一段") || (has("Civic") && (has("Sec. 1") || has("Sec 1")))) {
+                if (houseNum > 0) {
+                    if (isOdd || houseNum === 100) return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City", note: "單號及雙號100號歸中正區" };
+                    return { isMultiple: false, zip: "103", dist: "臺北市大同區", eng: "Datong Dist., Taipei City", note: "雙號(除100號)歸大同區" };
+                }
+                return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City" };
+            }
+            if (has("市民大道二段") || (has("Civic") && (has("Sec. 2") || has("Sec 2")))) return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City" };
+            if (has("市民大道三段") || (has("Civic") && (has("Sec. 3") || has("Sec 3")))) {
+                if (houseNum > 0) {
+                    if (isOdd) return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City", note: "單號全區歸中山區" };
+                    if (houseNum <= 84) return { isMultiple: false, zip: "100", dist: "臺北市中正區", eng: "Zhongzheng Dist., Taipei City", note: "雙號84號以下歸中正區" };
+                    return { isMultiple: false, zip: "106", dist: "臺北市大安區", eng: "Daan Dist., Taipei City", note: "雙號86號以上歸大安區" };
+                }
+                return { isMultiple: false, zip: "104", dist: "臺北市中山區", eng: "Zhongshan Dist., Taipei City" };
+            }
+
+            // Step 3: 全台歧義比對 — 當未帶縣市時，收集全台所有符合關鍵字的區域
+            let matchedDistricts = [];
+            for (let item of TAIWAN_DISTRICTS) {
+                let match = false;
+                if (has(item.zh)) {
+                    match = true;
+                } else {
+                    for (let dKey of item.distKeys) {
+                        if (has(dKey)) {
+                            match = true;
+                            break;
+                        }
+                    }
+                }
+                if (match) {
+                    matchedDistricts.push(item);
+                }
+            }
+
+            // 如果匹配到超過 1 個區域，且使用者未輸入縣市或明確路段，則觸發歧義提示模式
+            if (matchedDistricts.length > 1) {
+                return {
+                    isMultiple: true,
+                    matches: matchedDistricts,
+                    note: `輸入關鍵字存在 ${matchedDistricts.length} 個同名區域，請補全縣市或路段以精準鎖定`
+                };
+            }
+
+            // 如果剛好只匹配到 1 個區域
+            if (matchedDistricts.length === 1) {
+                let item = matchedDistricts[0];
+                return { isMultiple: false, zip: item.zip, dist: item.zh, eng: item.eng, note: "行政區匹配成功" };
+            }
+
+            return { isMultiple: false, zip: "---", dist: "查無對應區域", eng: "Area Not Found", note: "無法識別區域" };
+        }
+
         // State Management
-        let activeTab = 'search';
-        let currentBrowseCity = "台北市";
-        let currentBrowseDistrict = null;
+        let activeTab = 'scan';
 
         // On DOM Loaded
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             handleSingleSearch();
-            renderCitySelector();
         });
 
         // Tab Switcher Logic
         function switchTab(tabKey) {
             activeTab = tabKey;
-            ['search', 'browse', 'batch'].forEach(key => {
+            ['scan', 'search'].forEach(key => {
                 const btn = document.getElementById(`tab-${key}`);
                 const view = document.getElementById(`view-${key}`);
                 if (key === tabKey) {
-                    btn.className = "flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm";
+                    btn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm";
                     view.classList.remove('hidden');
                 } else {
-                    btn.className = "flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50";
+                    btn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50";
                     view.classList.add('hidden');
                 }
             });
         }
 
-        // Single Search Execution
+        // 相機拍照 / 選擇圖片 OCR 辨識
+        function handleImageScan(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('ocrStatus');
+            const img = document.getElementById('previewImg');
+            
+            img.src = URL.createObjectURL(file);
+            img.style.display = 'block';
+            status.innerText = '⏳ 讀取圖片中，正在啟動 OCR 中英文辨識引擎...';
+
+            Tesseract.recognize(
+                file,
+                'chi_tra+eng',
+                {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            status.innerText = `🔍 文字辨識進度：${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                }
+            ).then(({ data: { text } }) => {
+                status.innerText = '✅ 辨識完成！已自動比對精準郵遞區號。';
+                const cleanText = text.replace(/\s+/g, ' ').trim();
+                
+                document.getElementById('scanRawText').textContent = cleanText || "(未識別到有效文字)";
+                
+                const res = parseTaiwanAddress(cleanText);
+                const contentBox = document.getElementById('scanResultContent');
+
+                if (res.isMultiple) {
+                    contentBox.innerHTML = `
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                            <div class="text-xs font-bold text-amber-800 flex items-center space-x-1">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                                <span>⚠️ 可能是多個區域，請加入縣市以區分：</span>
+                            </div>
+                            <div class="space-y-1 pl-1">
+                                ${res.matches.map(m => `
+                                    <div class="flex items-center justify-between text-xs py-1 border-b border-amber-100 last:border-0">
+                                        <span class="font-bold text-slate-700">${m.zh}</span>
+                                        <span class="font-mono text-slate-500">${m.eng}</span>
+                                        <span class="font-black text-blue-700">${m.zip}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    contentBox.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-500">歸屬行政區：</span>
+                            <span class="text-base font-bold text-slate-800">${res.dist}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-500">英文對照：</span>
+                            <span class="text-xs font-medium text-slate-600">${res.eng}</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-xs text-slate-500">3碼郵遞區號：</span>
+                            <span class="text-2xl font-black text-blue-700">${res.zip}</span>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('scanResultBox').classList.remove('hidden');
+                lucide.createIcons();
+            }).catch(err => {
+                status.innerText = '❌ 辨識失敗，請重新拍攝或調整視角。';
+                console.error(err);
+            });
+        }
+
+        // Single Search Execution (手打搜尋)
         function handleSingleSearch() {
-            const input = document.getElementById('single-search-input').value.trim().toLowerCase();
+            const input = document.getElementById('single-search-input').value.trim();
             const clearBtn = document.getElementById('clear-search-btn');
             const container = document.getElementById('search-results');
-            const countEl = document.getElementById('search-count');
 
             clearBtn.classList.toggle('hidden', input.length === 0);
 
-            let matchedResults = [];
-
-            DB.forEach(entry => {
-                if (!input) {
-                    // Default show sample of roads
-                    entry.roads.slice(0, 4).forEach(road => {
-                        matchedResults.push({ ...entry, matchedRoad: road });
-                    });
-                } else {
-                    const distMatch = entry.district.toLowerCase().includes(input);
-                    const cityMatch = entry.city.toLowerCase().includes(input);
-                    const zipMatch = entry.zip.startsWith(input);
-
-                    entry.roads.forEach(road => {
-                        if (distMatch || cityMatch || zipMatch || road.toLowerCase().includes(input)) {
-                            matchedResults.push({ ...entry, matchedRoad: road });
-                        }
-                    });
-                }
-            });
-
-            countEl.textContent = matchedResults.length;
-
-            if (matchedResults.length === 0) {
+            if (!input) {
                 container.innerHTML = `
-                    <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-                        <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
-                        <p class="font-medium text-slate-600">未找到符合「${input}」的行政區或路段</p>
-                        <p class="text-xs text-slate-400 mt-1">請嘗試縮短關鍵字或檢查是否有錯別字</p>
+                    <div class="py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                        <i data-lucide="search" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                        <p class="font-medium text-slate-600">請在上方輸入框輸入中文或英文地址關鍵字</p>
+                        <p class="text-xs text-slate-400 mt-1">例如：Zhongzheng Dist, Zhongzheng Dist Keelung...</p>
                     </div>
                 `;
                 lucide.createIcons();
                 return;
             }
 
-            // Render limit to avoid DOM overflow
-            const displayList = matchedResults.slice(0, 60);
+            const res = parseTaiwanAddress(input);
 
-            container.innerHTML = displayList.map(item => `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-150 flex flex-col justify-between space-y-3">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <div class="text-xs font-semibold text-slate-400 flex items-center space-x-1">
-                                <span>${item.city}</span>
-                                <span>•</span>
-                                <span class="text-blue-600">${item.district}</span>
+            if (res.isMultiple) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200 space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">⚠️ 模糊提示：有多個可能區域</span>
+                                <h3 class="text-xl font-bold text-slate-800 mt-2">${input}</h3>
+                                <p class="text-xs text-amber-600 font-medium mt-1">📌 ${res.note}</p>
                             </div>
-                            <h3 class="text-base font-bold text-slate-800 mt-0.5">${item.matchedRoad}</h3>
                         </div>
-                        <span class="text-base font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">${item.zip}</span>
+                        <div class="pt-3 border-t border-slate-100 space-y-3">
+                            <div class="text-xs font-bold text-slate-500">找到下列符合的區域，點選可填入完整名稱精準比對：</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${res.matches.map(m => `
+                                    <div onclick="fillSearch('${m.zh}')" class="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl cursor-pointer transition flex items-center justify-between">
+                                        <div>
+                                            <div class="font-bold text-slate-800 text-sm">${m.zh}</div>
+                                            <div class="text-xs text-slate-400">${m.eng}</div>
+                                        </div>
+                                        <div class="text-lg font-black text-blue-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">${m.zip}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
                     </div>
-                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                        <span>郵件分類碼：<strong class="text-slate-700">${item.zip}</strong></span>
-                        <button onclick="copyToClipboard('${item.zip}', '${item.city}${item.district}${item.matchedRoad}')" class="text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1">
-                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                            <span>複製</span>
-                        </button>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">雙語匹配成功</span>
+                                <h3 class="text-xl font-bold text-slate-800 mt-2">${input}</h3>
+                                ${res.note ? `<p class="text-xs text-emerald-600 font-medium mt-1">📌 判定規則：${res.note}</p>` : ''}
+                            </div>
+                            <span class="text-3xl font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">${res.zip}</span>
+                        </div>
+                        <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-slate-600">
+                            <div>
+                                <div>歸屬區域：<strong class="text-slate-800">${res.dist}</strong></div>
+                                <div class="text-xs text-slate-400 mt-0.5">${res.eng}</div>
+                            </div>
+                            <button onclick="copyToClipboard('${res.zip}', '${res.dist} ${input}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                                <span>複製結果</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }
 
             lucide.createIcons();
         }
@@ -534,128 +875,6 @@
             handleSingleSearch();
         }
 
-        // Browse View Logic
-        function renderCitySelector() {
-            const cities = [...new Set(DB.map(d => d.city))];
-            const cityContainer = document.getElementById('city-selector');
-
-            cityContainer.innerHTML = cities.map(city => `
-                <button onclick="selectCity('${city}')" class="px-3 py-2 text-xs font-medium rounded-xl border ${city === currentBrowseCity ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'} transition">
-                    ${city}
-                </button>
-            `).join('');
-
-            renderDistrictChips();
-        }
-
-        function selectCity(city) {
-            currentBrowseCity = city;
-            currentBrowseDistrict = null;
-            renderCitySelector();
-        }
-
-        function renderDistrictChips() {
-            const districtContainer = document.getElementById('district-chips');
-            const filtered = DB.filter(d => d.city === currentBrowseCity);
-
-            districtContainer.innerHTML = filtered.map(item => `
-                <button onclick="selectDistrict('${item.district}')" class="px-3 py-1.5 text-xs font-medium rounded-lg border ${item.district === currentBrowseDistrict ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'} transition flex items-center space-x-1.5">
-                    <span>${item.district}</span>
-                    <span class="text-[10px] opacity-75 bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">${item.zip}</span>
-                </button>
-            `).join('');
-
-            if (!currentBrowseDistrict && filtered.length > 0) {
-                selectDistrict(filtered[0].district);
-            }
-        }
-
-        function selectDistrict(distName) {
-            currentBrowseDistrict = distName;
-            renderDistrictChips();
-
-            const item = DB.find(d => d.city === currentBrowseCity && d.district === distName);
-            if (!item) return;
-
-            document.getElementById('browse-district-title').textContent = `${item.city} ${item.district}`;
-            document.getElementById('browse-district-subtitle').textContent = `共包含 ${item.roads.length} 個主要檢核路段 / 街道`;
-            document.getElementById('browse-district-zip').textContent = item.zip;
-
-            const roadContainer = document.getElementById('browse-road-container');
-            roadContainer.innerHTML = item.roads.map(road => `
-                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-blue-300 hover:bg-blue-50/50 transition flex items-center justify-between group">
-                    <span class="truncate">${road}</span>
-                    <button onclick="copyToClipboard('${item.zip}', '${item.city}${item.district}${road}')" class="opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 transition">
-                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            lucide.createIcons();
-        }
-
-        // Batch Lookup Engine
-        function runBatchLookup() {
-            const rawText = document.getElementById('batch-input').value.trim();
-            if (!rawText) return;
-
-            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const tbody = document.getElementById('batch-table-body');
-            const resultCard = document.getElementById('batch-result-card');
-
-            const results = lines.map(line => {
-                let matchedZip = "未命中";
-                let matchedDist = "未知區";
-                let matchedRoad = "-";
-
-                // Scan through DB
-                for (let entry of DB) {
-                    for (let road of entry.roads) {
-                        const cleanRoad = road.replace(/[①②③④⑤⑥]/g, '');
-                        if (line.includes(cleanRoad)) {
-                            matchedZip = entry.zip;
-                            matchedDist = `${entry.city}${entry.district}`;
-                            matchedRoad = road;
-                            break;
-                        }
-                    }
-                    if (matchedZip !== "未命中") break;
-                }
-
-                return { raw: line, zip: matchedZip, dist: matchedDist, road: matchedRoad };
-            });
-
-            tbody.innerHTML = results.map(r => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="px-4 py-3 font-sans font-medium text-slate-800">${r.raw}</td>
-                    <td class="px-4 py-3"><span class="${r.zip !== '未命中' ? 'bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded' : 'bg-slate-100 text-slate-500 px-2 py-0.5 rounded'}">${r.zip}</span></td>
-                    <td class="px-4 py-3 font-sans">${r.dist}</td>
-                    <td class="px-4 py-3 font-sans text-slate-500">${r.road}</td>
-                </tr>
-            `).join('');
-
-            resultCard.classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function clearBatchInput() {
-            document.getElementById('batch-input').value = '';
-            document.getElementById('batch-result-card').classList.add('hidden');
-        }
-
-        function copyBatchResults() {
-            const rows = document.querySelectorAll('#batch-table-body tr');
-            if (rows.length === 0) return;
-
-            let textToCopy = "原始輸入\t郵遞區號\t歸屬區域\t對應路段\n";
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                textToCopy += `${cols[0].innerText}\t${cols[1].innerText}\t${cols[2].innerText}\t${cols[3].innerText}\n`;
-            });
-
-            executeCopy(textToCopy);
-        }
-
         // Copy Helper
         function copyToClipboard(zip, text) {
             const payload = `[${zip}] ${text}`;
@@ -669,7 +888,6 @@
             dummy.select();
             document.execCommand("copy");
             document.body.removeChild(dummy);
-
             showToast(`已複製：${text}`);
         }
 
