@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Tesseract.js OCR 庫 (支援即時與拍照辨識) -->
+    <!-- Tesseract.js OCR 庫 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -34,7 +34,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-base sm:text-lg leading-tight">全台郵遞區號與門牌行政區精準查詢</h1>
-                    <p class="text-xs text-slate-400">完整收錄全台 368 鄉鎮市區與即時相機預覽掃描</p>
+                    <p class="text-xs text-slate-400">完整收錄全台 368 鄉鎮市區與防亂碼即時掃描</p>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-4">
                 <div class="max-w-md mx-auto space-y-3">
                     <h2 class="text-lg font-bold text-slate-800">開啟相機即時對準地址</h2>
-                    <p class="text-xs text-slate-500">系統會開啟攝影機預覽畫面。您可以點擊「擷取畫面辨識」來即時分析畫面中的地址，或使用相簿上傳圖片。</p>
+                    <p class="text-xs text-slate-500">請將地址平穩對準框內。點擊「擷取畫面辨識」系統將自動過濾亂碼並比對精準行政區。</p>
                     
                     <!-- 即時相機視訊預覽框 -->
                     <div class="relative w-full bg-slate-900 rounded-2xl overflow-hidden shadow-inner aspect-video flex items-center justify-center">
@@ -91,7 +91,7 @@
                 <div id="scanResultBox" class="hidden max-w-md mx-auto mt-4 p-5 bg-blue-50 border border-blue-100 rounded-2xl text-left space-y-3 shadow-sm">
                     <div class="text-xs font-semibold text-blue-600 uppercase tracking-wider">辨識與解析結果</div>
                     <div>
-                        <div class="text-xs text-slate-500">原始辨識文字：</div>
+                        <div class="text-xs text-slate-500">過濾後辨識文字：</div>
                         <div id="scanRawText" class="text-xs font-mono bg-white p-2 rounded border border-blue-200 mt-1 text-slate-700 break-all">---</div>
                     </div>
                     <div id="scanResultContent" class="pt-2 border-t border-blue-200 space-y-2">
@@ -584,9 +584,18 @@
             return 0;
         }
 
+        // 清理 OCR 亂碼與雜訊
+        function cleanOCRText(rawText) {
+            // 過濾掉常見的無意義亂碼符號，保留英數字、中文、常見地址標點
+            return rawText
+                .replace(/[|\\_`^~<>#@$%&*+=()[\]{}]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         // 核心解析邏輯：雙語、多重可能區域歧義檢測與門牌比對引擎
         function parseTaiwanAddress(addr) {
-            addr = String(addr).trim();
+            addr = cleanOCRText(String(addr));
             var houseNum = extractHouseNumber(addr);
             var isOdd = (houseNum % 2 !== 0);
 
@@ -713,7 +722,7 @@
             const videoElement = document.getElementById('liveVideo');
             try {
                 videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' } // 預設使用後置鏡頭
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
                 });
                 videoElement.srcObject = videoStream;
             } catch (err) {
@@ -722,7 +731,7 @@
             }
         }
 
-        // 停止相機串流（切換分頁時可節省資源）
+        // 停止相機串流
         function stopCamera() {
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
@@ -748,7 +757,7 @@
             });
         }
 
-        // 點擊「擷取畫面並辨識」：直接從預覽框抓取畫面進行 OCR
+        // 點擊「擷取畫面並辨識」
         function captureAndScan() {
             const video = document.getElementById('liveVideo');
             const canvas = document.getElementById('captureCanvas');
@@ -788,13 +797,13 @@
                 {
                     logger: m => {
                         if (m.status === 'recognizing text') {
-                            status.innerText = `🔍 即時辨識進度：${Math.round(m.progress * 100)}%`;
+                            status.innerText = `🔍 辨識進度：${Math.round(m.progress * 100)}%`;
                         }
                     }
                 }
             ).then(({ data: { text } }) => {
                 status.innerText = '✅ 辨識完成！';
-                const cleanText = text.replace(/\s+/g, ' ').trim();
+                const cleanText = cleanOCRText(text);
                 
                 document.getElementById('scanRawText').textContent = cleanText || "(未識別到有效文字)";
                 
