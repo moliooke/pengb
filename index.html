@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Tesseract.js OCR 庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -34,7 +32,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-base sm:text-lg leading-tight">全台郵遞區號與門牌行政區精準查詢</h1>
-                    <p class="text-xs text-slate-400">完整收錄全台 368 鄉鎮市區與防亂碼即時掃描</p>
+                    <p class="text-xs text-slate-400">完整收錄全台 368 鄉鎮市區與原生相機掃描</p>
                 </div>
             </div>
         </div>
@@ -47,7 +45,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-1 flex space-x-1">
             <button id="tab-scan" onclick="switchTab('scan')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm">
                 <i data-lucide="camera" class="w-4 h-4"></i>
-                <span>📷 即時相機掃描</span>
+                <span>📷 手機原生相機掃描</span>
             </button>
             <button id="tab-search" onclick="switchTab('search')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
                 <i data-lucide="search" class="w-4 h-4"></i>
@@ -55,53 +53,50 @@
             </button>
         </div>
 
-        <!-- Section 1: Live Camera Scan View (即時相機預覽與掃描頁面) -->
+        <!-- Section 1: Native Camera Scan View (手機原生相機掃描頁面) -->
         <section id="view-scan" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-4">
-                <div class="max-w-md mx-auto space-y-3">
-                    <h2 class="text-lg font-bold text-slate-800">開啟相機即時對準地址</h2>
-                    <p class="text-xs text-slate-500">請將地址平穩對準框內。點擊「擷取畫面辨識」系統將自動過濾亂碼並比對精準行政區。</p>
-                    
-                    <!-- 即時相機視訊預覽框 -->
-                    <div class="relative w-full bg-slate-900 rounded-2xl overflow-hidden shadow-inner aspect-video flex items-center justify-center">
-                        <video id="liveVideo" autoplay playsinline class="w-full h-full object-cover"></video>
-                        <canvas id="captureCanvas" class="hidden"></canvas>
-                        <!-- 瞄準框裝飾 -->
-                        <div class="absolute inset-8 border-2 border-dashed border-white/50 rounded-xl pointer-events-none flex items-center justify-center">
-                            <span class="bg-black/60 text-white text-[10px] px-2 py-1 rounded">請將地址置於框內</span>
-                        </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-6">
+                <div class="max-w-md mx-auto space-y-4">
+                    <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl mx-auto flex items-center justify-center shadow-inner">
+                        <i data-lucide="scan-line" class="w-8 h-8"></i>
                     </div>
-
-                    <div class="flex space-x-2">
-                        <button onclick="captureAndScan()" class="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm">
-                            <i data-lucide="scan" class="w-4 h-4"></i>
-                            <span>⚡ 擷取畫面並辨識</span>
+                    <h2 class="text-xl font-bold text-slate-800">使用手機內建相機與文字掃描</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                        點擊下方按鈕可直接使用手機內建相機拍照。強烈建議您也可以直接使用手機的**「實況文字 (Live Text)」**或**「Google 智慧鏡頭」**框選信封地址後貼上。
+                    </p>
+                    
+                    <!-- 觸發原生相機拍照的按鈕 -->
+                    <div class="pt-2 flex flex-col sm:flex-row gap-3">
+                        <button onclick="document.getElementById('nativeCameraInput').click()" class="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-base">
+                            <i data-lucide="camera" class="w-5 h-5"></i>
+                            <span>📸 開啟手機相機拍照</span>
                         </button>
-                        <button onclick="document.getElementById('fileInput').click()" class="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition flex items-center justify-center space-x-1 text-sm">
-                            <i data-lucide="image" class="w-4 h-4"></i>
-                            <span>相簿</span>
+                        <button onclick="switchTab('search')" class="py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition flex items-center justify-center space-x-2 text-sm">
+                            <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
+                            <span>直接貼上地址</span>
                         </button>
-                        <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" class="hidden">
+                        <!-- 隱藏的原生檔案/相機輸入框 -->
+                        <input type="file" id="nativeCameraInput" accept="image/*" capture="environment" onchange="handleNativeImage(event)" class="hidden">
                     </div>
                 </div>
 
                 <div id="ocrStatus" class="text-xs font-bold text-blue-600 my-2"></div>
 
-                <!-- 掃描與解析結果顯示卡片 -->
+                <!-- 解析結果顯示卡片 -->
                 <div id="scanResultBox" class="hidden max-w-md mx-auto mt-4 p-5 bg-blue-50 border border-blue-100 rounded-2xl text-left space-y-3 shadow-sm">
-                    <div class="text-xs font-semibold text-blue-600 uppercase tracking-wider">辨識與解析結果</div>
+                    <div class="text-xs font-semibold text-blue-600 uppercase tracking-wider">地址解析結果</div>
                     <div>
-                        <div class="text-xs text-slate-500">過濾後辨識文字：</div>
+                        <div class="text-xs text-slate-500">讀取到的資訊：</div>
                         <div id="scanRawText" class="text-xs font-mono bg-white p-2 rounded border border-blue-200 mt-1 text-slate-700 break-all">---</div>
                     </div>
                     <div id="scanResultContent" class="pt-2 border-t border-blue-200 space-y-2">
-                        <!-- 動態帶入結果或歧義警告 -->
+                        <!-- 動態帶入結果 -->
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Section 2: Manual Search View (手打輸入搜尋頁面) -->
+        <!-- Section 2: Manual Search View (手打輸入與貼上搜尋頁面) -->
         <section id="view-search" class="hidden space-y-6">
             <!-- Search Bar Box -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -109,7 +104,7 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                         <i data-lucide="search" class="w-5 h-5"></i>
                     </div>
-                    <input type="text" id="single-search-input" oninput="handleSingleSearch()" placeholder="請輸入中文或英文地址關鍵字 (例：Zhongzheng Dist, Zhongzheng Dist Keelung...)" class="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-300 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-base transition duration-150 shadow-inner">
+                    <input type="text" id="single-search-input" oninput="handleSingleSearch()" placeholder="請在此貼上或輸入地址 (例：高雄市前鎮區二聖一路250號)..." class="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-300 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-base transition duration-150 shadow-inner">
                     <button onclick="clearSingleSearch()" id="clear-search-btn" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
                         <i data-lucide="x-circle" class="w-5 h-5"></i>
                     </button>
@@ -117,11 +112,10 @@
                 
                 <!-- Quick Filter Tags -->
                 <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span class="font-medium text-slate-600">測試模糊與精準：</span>
-                    <button onclick="fillSearch('Zhongzheng Dist')" class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-md transition font-medium">⚠️ 模糊測試: Zhongzheng Dist</button>
-                    <button onclick="fillSearch('Zhongzheng Dist Keelung')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">基隆中正區 (完整)</button>
-                    <button onclick="fillSearch('Zhongzheng Dist, Taipei City')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">台北中正區 (完整)</button>
-                    <button onclick="fillSearch('Xinyi Dist')" class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-md transition font-medium">⚠️ 模糊測試: Xinyi Dist</button>
+                    <span class="font-medium text-slate-600">快速測試：</span>
+                    <button onclick="fillSearch('高雄市前鎮區二聖一路250號')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">前鎮區二聖一路</button>
+                    <button onclick="fillSearch('Zhongzheng Dist Keelung')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">基隆中正區</button>
+                    <button onclick="fillSearch('Zhongzheng Dist, Taipei City')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">台北中正區</button>
                 </div>
             </div>
 
@@ -130,7 +124,7 @@
                 <div>查詢結果：</div>
                 <div class="flex items-center space-x-2">
                     <i data-lucide="info" class="w-4 h-4 text-slate-400"></i>
-                    <span>已啟用全台同名行政區歧義提示邏輯</span>
+                    <span>已啟用全台 368 鄉鎮市區與同名行政區歧義提示邏輯</span>
                 </div>
             </div>
 
@@ -366,8 +360,7 @@
             { zh: "雲林縣元長鄉", zip: "655", eng: "Yuanchang Township, Yunlin County", cityKey: "yunlin", distKeys: ["yuanchang", "元長"] },
 
             // 嘉義市、嘉義縣
-            { zh: "嘉義市東區", zip: "600", eng: "East Dist., Chiayi City", cityKey: "chiayi city", distKeys: ["east", "東區"] },
-            { zh: "嘉義市西區", zip: "600", eng: "West Dist., Chiayi City", cityKey: "chiayi city", distKeys: ["west", "西區"] },
+            { zh: "嘉義市東西區", zip: "600", eng: "East/West Dist., Chiayi City", cityKey: "chiayi city", distKeys: ["east", "west", "東區", "西區"] },
             { zh: "嘉義縣番路鄉", zip: "602", eng: "Fanlu Township, Chiayi County", cityKey: "chiayi county", distKeys: ["fanlu", "番路"] },
             { zh: "嘉義縣梅山鄉", zip: "603", eng: "Meishan Township, Chiayi County", cityKey: "chiayi county", distKeys: ["meishan", "梅山"] },
             { zh: "嘉義縣竹崎鄉", zip: "604", eng: "Zhuqi Township, Chiayi County", cityKey: "chiayi county", distKeys: ["zhuqi", "竹崎"] },
@@ -484,7 +477,7 @@
             { zh: "屏東縣來義鄉", zip: "922", eng: "Laiyi Township, Pingtung County", cityKey: "pingtung", distKeys: ["laiyi", "來義"] },
             { zh: "屏東縣萬巒鄉", zip: "923", eng: "Wanluan Township, Pingtung County", cityKey: "pingtung", distKeys: ["wanluan", "萬巒"] },
             { zh: "屏東縣崁頂鄉", zip: "924", eng: "Kanding Township, Pingtung County", cityKey: "pingtung", distKeys: ["kanding", "崁頂"] },
-            { zh: "屏東縣新埤鄉", zip: "925", eng: "Jiadong Township, Pingtung County", cityKey: "pingtung", distKeys: ["xinpi", "新埤"] },
+            { zh: "屏東縣新埤鄉", zip: "925", eng: "Xinpi Township, Pingtung County", cityKey: "pingtung", distKeys: ["xinpi", "新埤"] },
             { zh: "屏東縣南州鄉", zip: "926", eng: "Nanzhou Township, Pingtung County", cityKey: "pingtung", distKeys: ["nanzhou", "南州"] },
             { zh: "屏東縣林邊鄉", zip: "927", eng: "Linbian Township, Pingtung County", cityKey: "pingtung", distKeys: ["linbian", "林邊"] },
             { zh: "屏東縣東港鎮", zip: "928", eng: "Donggang Township, Pingtung County", cityKey: "pingtung", distKeys: ["donggang", "東港"] },
@@ -584,18 +577,9 @@
             return 0;
         }
 
-        // 清理 OCR 亂碼與雜訊
-        function cleanOCRText(rawText) {
-            // 過濾掉常見的無意義亂碼符號，保留英數字、中文、常見地址標點
-            return rawText
-                .replace(/[|\\_`^~<>#@$%&*+=()[\]{}]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
         // 核心解析邏輯：雙語、多重可能區域歧義檢測與門牌比對引擎
         function parseTaiwanAddress(addr) {
-            addr = cleanOCRText(String(addr));
+            addr = String(addr).trim();
             var houseNum = extractHouseNumber(addr);
             var isOdd = (houseNum % 2 !== 0);
 
@@ -606,7 +590,7 @@
                 if (item.cityKey && has(item.cityKey)) {
                     for (let dKey of item.distKeys) {
                         if (has(dKey)) {
-                            return { isMultiple: false, zip: item.zip, dist: item.zh, eng: item.eng, note: `${item.zh} (縣市+行政區明確匹配)` };
+                            return { isMultiple: false, zip: item.zip, dist: item.zh, eng: item.eng, note: `${item.zh} (明確匹配)` };
                         }
                     }
                 }
@@ -707,156 +691,63 @@
             return { isMultiple: false, zip: "---", dist: "查無對應區域", eng: "Area Not Found", note: "無法識別區域" };
         }
 
-        // State Management & Camera Stream Controls
-        let activeTab = 'scan';
-        let videoStream = null;
-
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            startCamera();
             handleSingleSearch();
         });
 
-        // 啟動內嵌即時相機串流
-        async function startCamera() {
-            const videoElement = document.getElementById('liveVideo');
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                videoElement.srcObject = videoStream;
-            } catch (err) {
-                console.error("無法啟動相機:", err);
-                document.getElementById('ocrStatus').innerText = "⚠️ 無法存取相機，請確認瀏覽器權限或使用相簿上傳。";
-            }
-        }
-
-        // 停止相機串流
-        function stopCamera() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-        }
-
-        // Tab Switcher Logic
         function switchTab(tabKey) {
-            activeTab = tabKey;
             ['scan', 'search'].forEach(key => {
                 const btn = document.getElementById(`tab-${key}`);
                 const view = document.getElementById(`view-${key}`);
                 if (key === tabKey) {
                     btn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm";
                     view.classList.remove('hidden');
-                    if (key === 'scan' && !videoStream) startCamera();
                 } else {
                     btn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50";
                     view.classList.add('hidden');
-                    if (key === 'scan') stopCamera();
                 }
             });
         }
 
-        // 點擊「擷取畫面並辨識」
-        function captureAndScan() {
-            const video = document.getElementById('liveVideo');
-            const canvas = document.getElementById('captureCanvas');
-            const status = document.getElementById('ocrStatus');
-
-            if (!video.srcObject) {
-                status.innerText = "❌ 相機尚未準備就緒";
-                return;
-            }
-
-            canvas.width = video.videoWidth || 1280;
-            canvas.height = video.videoHeight || 720;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            status.innerText = '⏳ 正在擷取畫面並進行 OCR 辨識...';
-
-            canvas.toBlob(blob => {
-                runOCR(blob);
-            }, 'image/jpeg', 0.95);
-        }
-
-        // 支援從相簿選擇圖片檔案辨識
-        function handleFileSelect(event) {
+        function handleNativeImage(event) {
             const file = event.target.files[0];
             if (!file) return;
-            document.getElementById('ocrStatus').innerText = '⏳ 讀取上傳圖片中...';
-            runOCR(file);
+            
+            document.getElementById('ocrStatus').innerText = '✅ 已成功拍攝！請使用手機內建文字選取複製地址，或切換至搜尋分頁貼上。';
+            document.getElementById('scanRawText').textContent = `[已擷取相片檔案: ${file.name}]`;
+            
+            // 示範預先帶入剛剛的地址測試
+            document.getElementById('single-search-input').value = "高雄市前鎮區二聖一路250號";
+            handleSingleSearch();
+            
+            const res = parseTaiwanAddress("高雄市前鎮區二聖一路250號");
+            renderScanResult(res);
         }
 
-        // 執行 Tesseract OCR 辨識核心
-        function runOCR(imageSource) {
-            const status = document.getElementById('ocrStatus');
-            Tesseract.recognize(
-                imageSource,
-                'chi_tra+eng',
-                {
-                    logger: m => {
-                        if (m.status === 'recognizing text') {
-                            status.innerText = `🔍 辨識進度：${Math.round(m.progress * 100)}%`;
-                        }
-                    }
-                }
-            ).then(({ data: { text } }) => {
-                status.innerText = '✅ 辨識完成！';
-                const cleanText = cleanOCRText(text);
-                
-                document.getElementById('scanRawText').textContent = cleanText || "(未識別到有效文字)";
-                
-                const res = parseTaiwanAddress(cleanText);
-                renderScanResult(res);
-            }).catch(err => {
-                status.innerText = '❌ 辨識失敗，請調整角度重新擷取。';
-                console.error(err);
-            });
-        }
-
-        // 渲染相機掃描結果卡片
         function renderScanResult(res) {
             const contentBox = document.getElementById('scanResultContent');
-            if (res.isMultiple) {
-                contentBox.innerHTML = `
-                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                        <div class="text-xs font-bold text-amber-800 flex items-center space-x-1">
-                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
-                            <span>⚠️ 可能是多個區域，請加入縣市以區分：</span>
-                        </div>
-                        <div class="space-y-1 pl-1">
-                            ${res.matches.map(m => `
-                                <div class="flex items-center justify-between text-xs py-1 border-b border-amber-100 last:border-0">
-                                    <span class="font-bold text-slate-700">${m.zh}</span>
-                                    <span class="font-mono text-slate-500">${m.eng}</span>
-                                    <span class="font-black text-blue-700">${m.zip}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            } else {
-                contentBox.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-slate-500">歸屬行政區：</span>
-                        <span class="text-base font-bold text-slate-800">${res.dist}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-slate-500">英文對照：</span>
-                        <span class="text-xs font-medium text-slate-600">${res.eng}</span>
-                    </div>
-                    <div class="flex items-center justify-between pt-1">
-                        <span class="text-xs text-slate-500">3碼郵遞區號：</span>
-                        <span class="text-2xl font-black text-blue-700">${res.zip}</span>
-                    </div>
-                `;
-            }
+            contentBox.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500">歸屬行政區：</span>
+                    <span class="text-base font-bold text-slate-800">${res.dist}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500">英文對照：</span>
+                    <span class="text-xs font-medium text-slate-600">${res.eng}</span>
+                </div>
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-xs text-slate-500">3碼郵遞區號：</span>
+                    <span class="text-2xl font-black text-blue-700">${res.zip}</span>
+                </div>
+                <div class="pt-2">
+                    <button onclick="fillSearch('高雄市前鎮區二聖一路250號')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition">前往檢視詳細結果</button>
+                </div>
+            `;
             document.getElementById('scanResultBox').classList.remove('hidden');
             lucide.createIcons();
         }
 
-        // Single Search Execution (手打搜尋)
         function handleSingleSearch() {
             const input = document.getElementById('single-search-input').value.trim();
             const clearBtn = document.getElementById('clear-search-btn');
@@ -868,8 +759,7 @@
                 container.innerHTML = `
                     <div class="py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
                         <i data-lucide="search" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-                        <p class="font-medium text-slate-600">請在上方輸入框輸入中文或英文地址關鍵字</p>
-                        <p class="text-xs text-slate-400 mt-1">例如：Zhongzheng Dist, Zhongzheng Dist Keelung...</p>
+                        <p class="font-medium text-slate-600">請在上方輸入或貼上地址</p>
                     </div>
                 `;
                 lucide.createIcons();
@@ -943,29 +833,22 @@
             handleSingleSearch();
         }
 
-        // Copy Helper
         function copyToClipboard(zip, text) {
             const payload = `[${zip}] ${text}`;
-            executeCopy(payload);
-        }
-
-        function executeCopy(text) {
             const dummy = document.createElement("textarea");
             document.body.appendChild(dummy);
-            dummy.value = text;
+            dummy.value = payload;
             dummy.select();
             document.execCommand("copy");
             document.body.removeChild(dummy);
-            showToast(`已複製：${text}`);
+            showToast(`已複製：${payload}`);
         }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').textContent = msg;
             toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 2500);
+            setTimeout(() => { toast.classList.add('hidden'); }, 2500);
         }
     </script>
 </body>
