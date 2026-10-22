@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全台郵遞區號與行政區精準查詢系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+        }
+        .tab-active {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i data-lucide="map-pin" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight sm:text-xl">全台郵遞區號與行政區精準查詢系統</h1>
+                    <p class="text-xs text-slate-400">含台北郵件處理中心最新路段對照資料</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>台北市路段資料已全數更新</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6">
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-1 flex space-x-1 overflow-x-auto">
+            <button id="tab-search" onclick="switchTab('search')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm">
+                <i data-lucide="search" class="w-4 h-4"></i>
+                <span>單筆路段查詢</span>
+            </button>
+            <button id="tab-browse" onclick="switchTab('browse')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
+                <i data-lucide="grid" class="w-4 h-4"></i>
+                <span>縣市區域總覽</span>
+            </button>
+            <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+                <span>批次地址解析</span>
+            </button>
+        </div>
+
+        <!-- Section 1: Single Search View -->
+        <section id="view-search" class="space-y-6">
+            <!-- Search Bar Box -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </div>
+                    <input type="text" id="single-search-input" oninput="handleSingleSearch()" placeholder="請輸入路段、街名、行政區或郵遞區號 (例如：信義路、公園路、大湖街、100...)" class="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-300 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-base transition duration-150 shadow-inner">
+                    <button onclick="clearSingleSearch()" id="clear-search-btn" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x-circle" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <!-- Quick Filter Tags -->
+                <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span class="font-medium text-slate-600">快捷熱門路段：</span>
+                    <button onclick="fillSearch('公園路')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">中正 公園路</button>
+                    <button onclick="fillSearch('迪化街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">大同 迪化街</button>
+                    <button onclick="fillSearch('市民大道')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">市民大道</button>
+                    <button onclick="fillSearch('天母東路')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">士林 天母東路</button>
+                    <button onclick="fillSearch('大湖街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">內湖 大湖街</button>
+                    <button onclick="fillSearch('政大一街')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition">木柵 政大一街</button>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 px-2">
+                <div>共找到 <span id="search-count" class="font-bold text-blue-600">0</span> 筆符合結果</div>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="info" class="w-4 h-4 text-slate-400"></i>
+                    <span>已精準對映台北郵件處理中心特用掛號分區號碼</span>
+                </div>
+            </div>
+
+            <!-- Results Grid -->
+            <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamic cards loaded via JS -->
+            </div>
+        </section>
+
+        <!-- Section 2: Browse View -->
+        <section id="view-browse" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <h2 class="text-base font-semibold text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="map" class="w-5 h-5 text-blue-600"></i>
+                    <span>依縣市與行政區瀏覽</span>
+                </h2>
+                
+                <!-- City Selector -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2" id="city-selector">
+                    <!-- City buttons filled by JS -->
+                </div>
+
+                <hr class="border-slate-100">
+
+                <!-- District Chips -->
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">行政區/郵件 processing 分區</span>
+                    <div class="flex flex-wrap gap-2" id="district-chips">
+                        <!-- District chips filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected District Road List Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 id="browse-district-title" class="text-lg font-bold text-slate-800">請選擇行政區</h3>
+                        <p id="browse-district-subtitle" class="text-xs text-slate-500">點擊上方行政區以查看詳細郵遞區號及包含路段列表</p>
+                    </div>
+                    <span id="browse-district-zip" class="text-2xl font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">-</span>
+                </div>
+
+                <div id="browse-road-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p>請於上方點選區域進行資料檢視</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Batch Lookup View -->
+        <section id="view-batch" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-800 flex items-center space-x-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-blue-600"></i>
+                        <span>批次地址解析與郵遞區號對照</span>
+                    </h2>
+                    <button onclick="clearBatchInput()" class="text-xs text-slate-500 hover:text-red-600 transition">清空輸入</button>
+                </div>
+                <p class="text-xs text-slate-500">請在下方輸入多筆地址（每行一筆），系統將迅速解析對應之 3 碼郵遞區號與歸屬分區。</p>
+
+                <textarea id="batch-input" rows="6" placeholder="例如：
+台北市中正區公園路1號
+台北市內湖區大湖街100號
+台北市北投區一心街5號
+文林北路200號" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm font-mono"></textarea>
+
+                <div class="flex justify-end space-x-3">
+                    <button onclick="runBatchLookup()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-sm transition flex items-center space-x-2">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>開始解析對照</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Batch Results Table -->
+            <div id="batch-result-card" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800">解析對照結果</h3>
+                    <button onclick="copyBatchResults()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center space-x-1">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span>複製對照結果</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th scope="col" class="px-4 py-3">原始輸入</th>
+                                <th scope="col" class="px-4 py-3">郵遞區號</th>
+                                <th scope="col" class="px-4 py-3">歸屬區域/分區</th>
+                                <th scope="col" class="px-4 py-3">匹配路段</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-table-body" class="divide-y divide-slate-200 font-mono text-xs">
+                            <!-- JS calculated rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-4">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            全台郵遞區號精準查詢系統 &copy; 2026 | 資料來源：台北郵件處理中心作業科掛號函件股對照表 & 中華郵政資料
+        </div>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-6 right-6 hidden bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center space-x-2 z-50 transition-all duration-300">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-msg">已成功複製到剪貼簿</span>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Data Store: Comprehensive Taipei Mail Sorting Reference + Nationwide Core Postcode Data
+        const DB = [
+            // Taipei City (Comprehensive Data from Reference Diagrams)
+            {
+                city: "台北市",
+                district: "中正區",
+                zip: "100",
+                roads: [
+                    "三元街", "丹陽街", "公園路", "水源路", "永綏街", "同安街", "沅陵街", "秀山街", "西陽街", 
+                    "金門街", "信陽街", "南海路", "南陽街", "思源街", "泉州街", "牯嶺街", "徐州街", "晉江街", 
+                    "樹林街", "泰安街", "常德街", "許昌街", "連雲街", "惠安街", "湖口街", "韶安街", "廈門街", 
+                    "福州街", "襄陽街", "齊東街", "衡陽街", "館前路", "臨沂街", "襄陽街", "鎮江街", "懷寧街", 
+                    "實慶路", "八德路", "博愛路", "延平南路", "林森南路", "愛國西路", "中山南路", "北平西路", 
+                    "北平東路", "杭州北路", "武昌街①", "金山北路", "長沙街①", "青島西路", "青島東路", "信義路①", 
+                    "貴陽街①", "開封街①", "寧波西路", "寧波東路", "漢口街①", "仁愛路①", "汀州路①②", "和平西路①", 
+                    "忠孝西路①", "杭州南路①②", "重慶南路①②", "紹興南路", "紹興北路", "濟南路①②", "羅斯福路①②③", 
+                    "凱達格蘭大道", "市民大道一段84號以下"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "大同區",
+                zip: "103",
+                roads: [
+                    "大龍街", "五原街", "天水路", "太原街", "平陽街", "民樂街", "永昌街", "甘州街", "甘谷街", 
+                    "伊寧街", "安西街", "赤峰街", "昌吉街", "保安街", "哈密街", "車輪街", "涼州街", "敦煌路", 
+                    "景化街", "華亭街", "貴德街", "塔城街", "萬全街", "寧夏路", "蘭州街", "歸綏街", "雙連街", 
+                    "迪化街①②", "重慶北路①②③", "延平北路①②③④", "市民大道一段(100號除外)", "鳳洲街", "西寧北路", "酒泉街"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "中山區",
+                zip: "104",
+                roads: [
+                    "一江街", "大直街", "中原街", "天祥街", "北安路", "四平街", "玉門街", "伊通街", "吉林路", 
+                    "合江街", "朱侖街", "明水路", "通北街", "植福路", "渭水路", "農安街", "劍南路", "德惠街", 
+                    "遼寧街", "錦州街", "龍江路", "濱江街", "雙城街", "建國北路", "長安東路①", "中山北路①②", 
+                    "民生東路①②", "民權東路①②", "南京東路①②", "新生北路①②③", "敬業一路", "敬業二路", "敬業三路", 
+                    "敬業四路", "樂群一路", "樂群二路", "樂群三路", "松江路", "崇實路", "市民大道二段單全", "市民大道三段單全", 
+                    "內湖路一段32巷全"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "松山區",
+                zip: "105",
+                roads: [
+                    "三民路", "北寧路", "吉祥路", "延壽街", "東寧路", "松河路", "健康路", "富錦街", "塔悠路", 
+                    "新中街", "新東街", "寧安街", "慶城街", "撫遠街", "寶清街", "饒河街", "八德路③", "光復北路", 
+                    "敦化北路", "民生東路④⑤", "民權東路③", "南京東路④⑤", "市民大道四段單全", "市民大道五段單全", 
+                    "市民大道六段單全", "松山路9巷雙全"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "萬華區",
+                zip: "108",
+                roads: [
+                    "三水街", "大理街", "內江街", "民和街", "永福街", "西昌街", "昆明街", "東園街", "武成街", 
+                    "長泰街", "長順街", "青年路", "康定路", "梧州街", "洛陽街", "峨嵋街", "桂林路", "廣州街", 
+                    "萬大路", "萬青街", "漢中街", "德昌街", "興義街", "興寧街", "雙和街", "雙園街", "實興街", 
+                    "西寧南路", "武昌街②", "長沙街②", "貴陽街②", "開封街②", "漢口街②", "艋舺大道", "西園路①②", 
+                    "和平西路③", "環河南路①②③", "中華路"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "大安區",
+                zip: "106",
+                roads: [
+                    "大安路", "四維路", "永康街", "安和路", "安居街", "青田街", "芳蘭路", "長興街", "敦南街", 
+                    "泰順街", "浦城街", "雲和街", "溫州街", "瑞安街", "樂利路", "通化街", "通安街", "臨江街", 
+                    "麗水街", "龍泉街", "信義路", "辛亥路①②③", "濟南路③", "臥龍街", "金山南路②", "建國南路①②", 
+                    "復興南路①②", "敦化南路①②", "和平東路①②", "新生南路②③", "市民大道三段86號以上"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "信義區",
+                zip: "110",
+                roads: [
+                    "大道路", "市府路", "吳興街", "林口街", "松仁路", "松子路", "松勇路", "松高路", "松智路", 
+                    "松隆路", "松動路", "松廉路", "松壽路", "松德路", "松信路", "青雲街", "信安街", "崇德街", 
+                    "祥雲街", "莊敬路", "景雲街", "紫雲街", "逸仙路", "瑞雲街", "菸廠路", "基隆路①", "信義路⑤⑥", 
+                    "松山路", "市民大道五段雙全", "市民大道六段雙全"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "北投區",
+                zip: "112",
+                roads: [
+                    "一心街", "一德街", "三合街", "大大路", "大同街", "大度路", "大業路", "大興街", "中山路", 
+                    "中心街", "中正街", "中和街", "中華街", "公館路", "民族街", "石牌路", "立農街", "石仙路", 
+                    "立功街", "光明路", "吉利街", "同德街", "自強街", "仙渡路", "西安街", "西圍街", "秀山街", 
+                    "育仁路", "奉賢路", "奇岩路", "東華街", "東陽街", "知行路", "泉源路", "洲美街", "建民路", 
+                    "崇仁路", "振興街", "珠海路", "尊賢街", "登山路", "進賢路", "翠嶺街", "新市街", "新民路", 
+                    "新興路", "溫泉街", "義方街", "義理街", "聖景路", "實踐街", "稻香路", "學園路", "樹林路", 
+                    "磺港路", "豐年路", "雙全街", "懷德街", "中央北路", "中央南路", "文化三路", "文林北路", 
+                    "中山北路七段219巷3弄"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "陽明山分區",
+                zip: "113",
+                roads: [
+                    "大亨路", "中華路", "中興路", "仁民路", "光華路", "和平路", "長春街", "建國路", "建業路", 
+                    "格致路", "紗帽路", "國泰街", "凱旋路", "勝利街", "新生街", "湖底路", "菁山路", "竹子湖路", 
+                    "陽明路一段", "陽明路二段", "愛富一街", "愛富二街", "愛富三街", "華岡路"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "士林區",
+                zip: "111",
+                roads: [
+                    "前街", "後街", "力行街", "士東路", "士商路", "大北路", "大光街", "大西路", "大東路", 
+                    "大南路", "小北街", "小西街", "小東街", "小南街", "中正路", "中社路", "中興街", "安平街", 
+                    "自祥巷", "至善路", "文昌路", "文林路", "志成街", "克強街", "幸福街", "忠義街", "至誠路", 
+                    "和豐街", "幸福路", "忠勇街", "忠誠路", "社子街", "社中街", "明溪街", "東山路", "社正路", 
+                    "芝玉路", "雨農路", "雨聲街", "前港街", "後港街", "故宮路", "美崙街", "德行東路", "基隆路", 
+                    "倫等街", "通河西街", "莊頂路", "通河東街", "華興街", "華聲街", "華齡街", "貴富街", "新安路", 
+                    "福志路", "福林路", "福國路", "福壽路", "福榮街", "福德路", "翠山街", "劍潭路", "磺溪街", 
+                    "下樹林街", "中庸五路", "天母東路"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "內湖區",
+                zip: "114",
+                roads: [
+                    "大湖街", "文德路", "安康路", "江南路", "行善路", "東湖路", "金龍路", "洲子街", "港墘路", 
+                    "新湖一路", "新湖二路", "新湖三路", "舊宗路", "瑞光路", "康寧路", "陽光街", "五分街", 
+                    "金雲路", "金湖路", "星雲街", "行愛路", "康樂街", "金莊路", "港華街", "成功路", "麗山街", 
+                    "環山路", "瑞光路", "港墘路", "東湖路"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "景美分區",
+                zip: "117",
+                roads: [
+                    "三福街", "公館街", "仙岩路", "育英街", "車前路", "景中街", "景興街", "景後街", "景美街", 
+                    "景華街", "景明街", "景福街", "景仁街", "溪洲街", "溪口街", "萬隆街", "萬慶街", "福興路", 
+                    "興順街", "興德路", "興隆路", "景興路"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "木柵分區",
+                zip: "116",
+                roads: [
+                    "一壽街", "下崙路", "久康街", "中崙路", "木柵路", "木新路", "永安街", "光輝路", "老泉街", 
+                    "秀英街", "和興路", "忠順街", "指南路", "富山路", "保儀路", "恆光街", "開元街", "集英街", 
+                    "新光路", "萬安街", "萬利街", "萬和街", "萬壽路", "萬寧街", "政大一街", "政大二街", "政大三街", 
+                    "試院路", "樟新街"
+                ]
+            },
+            {
+                city: "台北市",
+                district: "南港區",
+                zip: "115",
+                roads: [
+                    "三重路", "玉成街", "向陽路", "長安路", "重陽路", "東新街", "南港路", "惠民街", "園區街", 
+                    "新民街", "富康街", "凌雲街", "舊莊街", "研究院路", "經貿一路", "經貿二路", "興華路", 
+                    "興中路", "昆陽街"
+                ]
+            },
+            {
+                city: "新北市",
+                district: "汐止區",
+                zip: "221",
+                roads: [
+                    "康寧街", "長青路", "新台五路", "大同路", "中興路", "福德一路", "福德二路", "汐萬路"
+                ]
+            },
+            { city: "新北市", district: "板橋區", zip: "220", roads: ["中山路", "文化路", "縣民大道", "南雅南路", "雙十路"] },
+            { city: "新北市", district: "新莊區", zip: "242", roads: ["中正路", "新泰路", "幸福路", "思源路"] },
+            { city: "新北市", district: "中和區", zip: "235", roads: ["中山路", "景平路", "連城路", "中正路"] },
+            { city: "桃園市", district: "桃園區", zip: "330", roads: ["中正路", "中山路", "復興路", "大興西路"] },
+            { city: "桃園市", district: "中壢區", zip: "320", roads: ["延平路", "中華路", "元化路", "健行路"] },
+            { city: "台中市", district: "西屯區", zip: "407", roads: ["台灣大道", "文心路", "西屯路", "黎明路"] },
+            { city: "台中市", district: "北區", zip: "404", roads: ["崇德路", "進化北路", "健行路", "三民路"] },
+            { city: "台南市", district: "中西區", zip: "700", roads: ["府前路", "西門路", "民生路", "民族路"] },
+            { city: "高雄市", district: "新興區", zip: "800", roads: ["中山一路", "七賢一路", "六合一路", "中正三路"] },
+            { city: "高雄市", district: "苓雅區", zip: "802", roads: ["三多三路", "五福一路", "成功一路", "光華一路"] }
+        ];
+
+        // State Management
+        let activeTab = 'search';
+        let currentBrowseCity = "台北市";
+        let currentBrowseDistrict = null;
+
+        // On DOM Loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            handleSingleSearch();
+            renderCitySelector();
+        });
+
+        // Tab Switcher Logic
+        function switchTab(tabKey) {
+            activeTab = tabKey;
+            ['search', 'browse', 'batch'].forEach(key => {
+                const btn = document.getElementById(`tab-${key}`);
+                const view = document.getElementById(`view-${key}`);
+                if (key === tabKey) {
+                    btn.className = "flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 font-semibold shadow-sm";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center space-x-2 text-slate-600 hover:bg-slate-50";
+                    view.classList.add('hidden');
+                }
+            });
+        }
+
+        // Single Search Execution
+        function handleSingleSearch() {
+            const input = document.getElementById('single-search-input').value.trim().toLowerCase();
+            const clearBtn = document.getElementById('clear-search-btn');
+            const container = document.getElementById('search-results');
+            const countEl = document.getElementById('search-count');
+
+            clearBtn.classList.toggle('hidden', input.length === 0);
+
+            let matchedResults = [];
+
+            DB.forEach(entry => {
+                if (!input) {
+                    // Default show sample of roads
+                    entry.roads.slice(0, 4).forEach(road => {
+                        matchedResults.push({ ...entry, matchedRoad: road });
+                    });
+                } else {
+                    const distMatch = entry.district.toLowerCase().includes(input);
+                    const cityMatch = entry.city.toLowerCase().includes(input);
+                    const zipMatch = entry.zip.startsWith(input);
+
+                    entry.roads.forEach(road => {
+                        if (distMatch || cityMatch || zipMatch || road.toLowerCase().includes(input)) {
+                            matchedResults.push({ ...entry, matchedRoad: road });
+                        }
+                    });
+                }
+            });
+
+            countEl.textContent = matchedResults.length;
+
+            if (matchedResults.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                        <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+                        <p class="font-medium text-slate-600">未找到符合「${input}」的行政區或路段</p>
+                        <p class="text-xs text-slate-400 mt-1">請嘗試縮短關鍵字或檢查是否有錯別字</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // Render limit to avoid DOM overflow
+            const displayList = matchedResults.slice(0, 60);
+
+            container.innerHTML = displayList.map(item => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-150 flex flex-col justify-between space-y-3">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-400 flex items-center space-x-1">
+                                <span>${item.city}</span>
+                                <span>•</span>
+                                <span class="text-blue-600">${item.district}</span>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-800 mt-0.5">${item.matchedRoad}</h3>
+                        </div>
+                        <span class="text-base font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">${item.zip}</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>郵件分類碼：<strong class="text-slate-700">${item.zip}</strong></span>
+                        <button onclick="copyToClipboard('${item.zip}', '${item.city}${item.district}${item.matchedRoad}')" class="text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>複製</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function clearSingleSearch() {
+            document.getElementById('single-search-input').value = '';
+            handleSingleSearch();
+        }
+
+        function fillSearch(term) {
+            switchTab('search');
+            document.getElementById('single-search-input').value = term;
+            handleSingleSearch();
+        }
+
+        // Browse View Logic
+        function renderCitySelector() {
+            const cities = [...new Set(DB.map(d => d.city))];
+            const cityContainer = document.getElementById('city-selector');
+
+            cityContainer.innerHTML = cities.map(city => `
+                <button onclick="selectCity('${city}')" class="px-3 py-2 text-xs font-medium rounded-xl border ${city === currentBrowseCity ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'} transition">
+                    ${city}
+                </button>
+            `).join('');
+
+            renderDistrictChips();
+        }
+
+        function selectCity(city) {
+            currentBrowseCity = city;
+            currentBrowseDistrict = null;
+            renderCitySelector();
+        }
+
+        function renderDistrictChips() {
+            const districtContainer = document.getElementById('district-chips');
+            const filtered = DB.filter(d => d.city === currentBrowseCity);
+
+            districtContainer.innerHTML = filtered.map(item => `
+                <button onclick="selectDistrict('${item.district}')" class="px-3 py-1.5 text-xs font-medium rounded-lg border ${item.district === currentBrowseDistrict ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'} transition flex items-center space-x-1.5">
+                    <span>${item.district}</span>
+                    <span class="text-[10px] opacity-75 bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">${item.zip}</span>
+                </button>
+            `).join('');
+
+            if (!currentBrowseDistrict && filtered.length > 0) {
+                selectDistrict(filtered[0].district);
+            }
+        }
+
+        function selectDistrict(distName) {
+            currentBrowseDistrict = distName;
+            renderDistrictChips();
+
+            const item = DB.find(d => d.city === currentBrowseCity && d.district === distName);
+            if (!item) return;
+
+            document.getElementById('browse-district-title').textContent = `${item.city} ${item.district}`;
+            document.getElementById('browse-district-subtitle').textContent = `共包含 ${item.roads.length} 個主要檢核路段 / 街道`;
+            document.getElementById('browse-district-zip').textContent = item.zip;
+
+            const roadContainer = document.getElementById('browse-road-container');
+            roadContainer.innerHTML = item.roads.map(road => `
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-blue-300 hover:bg-blue-50/50 transition flex items-center justify-between group">
+                    <span class="truncate">${road}</span>
+                    <button onclick="copyToClipboard('${item.zip}', '${item.city}${item.district}${road}')" class="opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 transition">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Batch Lookup Engine
+        function runBatchLookup() {
+            const rawText = document.getElementById('batch-input').value.trim();
+            if (!rawText) return;
+
+            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const tbody = document.getElementById('batch-table-body');
+            const resultCard = document.getElementById('batch-result-card');
+
+            const results = lines.map(line => {
+                let matchedZip = "未命中";
+                let matchedDist = "未知區";
+                let matchedRoad = "-";
+
+                // Scan through DB
+                for (let entry of DB) {
+                    for (let road of entry.roads) {
+                        const cleanRoad = road.replace(/[①②③④⑤⑥]/g, '');
+                        if (line.includes(cleanRoad)) {
+                            matchedZip = entry.zip;
+                            matchedDist = `${entry.city}${entry.district}`;
+                            matchedRoad = road;
+                            break;
+                        }
+                    }
+                    if (matchedZip !== "未命中") break;
+                }
+
+                return { raw: line, zip: matchedZip, dist: matchedDist, road: matchedRoad };
+            });
+
+            tbody.innerHTML = results.map(r => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-4 py-3 font-sans font-medium text-slate-800">${r.raw}</td>
+                    <td class="px-4 py-3"><span class="${r.zip !== '未命中' ? 'bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded' : 'bg-slate-100 text-slate-500 px-2 py-0.5 rounded'}">${r.zip}</span></td>
+                    <td class="px-4 py-3 font-sans">${r.dist}</td>
+                    <td class="px-4 py-3 font-sans text-slate-500">${r.road}</td>
+                </tr>
+            `).join('');
+
+            resultCard.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function clearBatchInput() {
+            document.getElementById('batch-input').value = '';
+            document.getElementById('batch-result-card').classList.add('hidden');
+        }
+
+        function copyBatchResults() {
+            const rows = document.querySelectorAll('#batch-table-body tr');
+            if (rows.length === 0) return;
+
+            let textToCopy = "原始輸入\t郵遞區號\t歸屬區域\t對應路段\n";
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                textToCopy += `${cols[0].innerText}\t${cols[1].innerText}\t${cols[2].innerText}\t${cols[3].innerText}\n`;
+            });
+
+            executeCopy(textToCopy);
+        }
+
+        // Copy Helper
+        function copyToClipboard(zip, text) {
+            const payload = `[${zip}] ${text}`;
+            executeCopy(payload);
+        }
+
+        function executeCopy(text) {
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            showToast(`已複製：${text}`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
